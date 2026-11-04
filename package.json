@@ -1,0 +1,13 @@
+{
+  "name": "oracle-ai-world-assas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Portail pédagogique Oracle AI World, SCM et Agentic Enterprise pour ASSAS",
+  "scripts": {
+    "test": "node tests/portal-smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

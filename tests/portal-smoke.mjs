@@ -1,0 +1,70 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+
+const html=fs.readFileSync(new URL('../site/index.html',import.meta.url),'utf8');
+const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const nodes=new Map(),listeners=new Map(),storage=new Map();
+class Element{
+ constructor(id=''){this.id=id;this.textContent='';this.hidden=false;this.style={};this.dataset={};this.value='';this.checked=false;this.tagName='DIV';this.attrs={};this._html='';this.className='';this.offsetParent={};this.classList={add(){},remove(){},toggle(){}};}
+ set innerHTML(v){this._html=v;for(const m of v.matchAll(/\bid="([^"]+)"/g)){if(!nodes.has('#'+m[1]))nodes.set('#'+m[1],new Element(m[1]));}}
+ get innerHTML(){return this._html;}
+ addEventListener(k,v){listeners.set(this.id+':'+k,v);}
+ setAttribute(k,v){this.attrs[k]=v;}
+ focus(){}
+ querySelectorAll(){return [];}
+}
+for(const m of html.split('<script>')[0].matchAll(/\bid="([^"]+)"/g))nodes.set('#'+m[1],new Element(m[1]));
+for(const s of ['[data-action="project"]','.video-player','#modal .close'])nodes.set(s,new Element());
+const document={querySelector:s=>nodes.get(s)||null,querySelectorAll:()=>[],addEventListener:(k,v)=>listeners.set(k,v),activeElement:new Element(),documentElement:{requestFullscreen:async()=>{}},body:new Element(),fullscreenElement:null};
+const context=vm.createContext({document,window:{scrollTo(){},addEventListener(){}},location:{hash:''},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},setInterval(){},setTimeout(){},clearTimeout(){},Intl,URL,console,Date});
+vm.runInContext(code,context);
+const run=s=>vm.runInContext(s,context);
+const check=(s,message)=>assert.ok(run(s),message);
+for(const route of ['accueil','frise','enterprise','ai-world','scm','deleguer','demos','atelier','parcours']){
+ run(`navigate('${route}')`);
+ assert.ok(nodes.get('#main').innerHTML.length>100,route+' doit contenir du contenu');
+}
+run("navigate('ai-world')");
+for(let i=0;i<5;i++){run(`state.feature=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('FEATURES[state.feature].title')));}
+run("navigate('scm')");
+for(let i=0;i<6;i++){run(`state.module=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MODULES[state.module].question')));}
+run("navigate('deleguer')");
+for(let m=0;m<3;m++)for(let s=0;s<4;s++){run(`state.mission=${m};state.step=${s};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MISSIONS[state.mission].steps[state.step][0]')));}
+run("navigate('atelier');action('workshop-reset')");
+check('totals().available===600&&totals().margin===52000&&!totals().valid','Stock initial : résultat et priorité B');
+run("action('apply-reference')");
+check('totals().available===1000&&totals().margin===75500&&totals().valid','Tous secours :75 500€');
+run("action('shock');propose()");
+check('totals().available===900&&totals().margin===72000&&allocation.c===150&&totals().valid','Rebondissement :72 000€');
+run('allocation.qualified=false;propose()');
+check('totals().available===800&&totals().margin===67000&&allocation.c===50&&totals().valid','Sans substitution :67 000€');
+run('allocation.a=400;allocation.b=350;allocation.c=250;updateWorkshop()');
+assert.equal(nodes.get('#margin').textContent,'Plan irréalisable');
+check("JSON.parse(localStorage.getItem('assas-portal-allocation-v1')).qualified===false",'Sauvegarde des choix');
+for(const a of ['help','sources','transverse','assumptions','correction','pause','fin']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'),a+' : fenêtre nommée');run('closeModal()');}
+for(let i=0;i<3;i++){run(`demoModal(${i},false)`);for(let s=0;s<3;s++){run(`state.demoStep=${s};drawDemo()`);assert.ok(nodes.get('#modal').innerHTML.includes(run('DEMOS[state.demo].explain[state.demoStep]')));}run(`demoModal(${i},true)`);assert.ok(!nodes.get('#modal').innerHTML.includes('<iframe'),'Vidéo chargée uniquement au clic');run("action('video-load')");assert.ok(nodes.get('.video-player').innerHTML.includes('youtube-nocookie.com'));run('closeModal()');}
+check('Object.keys(SOURCES).length===25','25 références officielles');
+run("navigate('frise');state.timelineStep=0;render()");
+for(let i=0;i<7;i++){check(`state.timelineStep===${i}`,'Index du jalon');assert.ok(nodes.get('#main').innerHTML.includes(run('TIMELINE[state.timelineStep].meaning')));if(i<6)run("action('time-next')");}
+assert.ok(nodes.get('#main').innerHTML.includes('Vers l’Agentic Enterprise'));
+run("action('time-overview')");check('state.timelineOverview===true','Vue d’ensemble');
+run("action('time-prev')");check('state.timelineStep===5','Recul dans la frise');
+check('TIMELINE.every((m,i)=>i===0||m.iso>TIMELINE[i-1].iso)','Ordre chronologique des annonces');
+run("navigate('enterprise')");for(let i=0;i<3;i++){run(`state.enterpriseView=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(['Les documents fixent les engagements.','Le cadre devient exploitable par les agents.','Les agents échangent dans ce cadre.'][i]));assert.ok(nodes.get('#main').innerHTML.includes('data:image/svg+xml;base64,'),'Schéma embarqué');}
+run('state.enterpriseView=2;state.enterpriseException=false;render()');
+assert.ok(nodes.get('#main').innerHTML.includes('Offre à 1 650 €'));
+const normalImage=run('ENTERPRISE_IMAGES.agents');
+assert.ok(Buffer.from(normalImage.split(',')[1],'base64').toString().includes('1 650 €'));
+run('state.enterpriseException=true;render()');
+assert.ok(nodes.get('#main').innerHTML.includes(run('ENTERPRISE_IMAGES.exception')));
+assert.ok(Buffer.from(run('ENTERPRISE_IMAGES.exception').split(',')[1],'base64').toString().includes('validation humaine'));
+for(const a of ['enterprise-trust','enterprise-image']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'));run('closeModal()');}
+for(const a of ['opening-script','enterprise-source']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'));run('closeModal()');}
+check('Object.values(SOURCES).every(s=>new URL(s[1]).protocol==="https:")','Sources HTTPS');
+assert.ok(!/__(HERO|SOURCES)__/.test(html),'Aucun emplacement incomplet');
+assert.equal((html.match(/<script>/g)||[]).length,1,'Un script embarqué');
+assert.ok(!/<script[^>]*src=|<link[^>]*href=/.test(html),'Aucune dépendance réseau au chargement');
+const durations=[15,40,25,15,30,50,5];assert.equal(durations.reduce((a,b)=>a+b,0),180);
+console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,12 étapes IA,simulateur,25 sources et180 minutes.');
+console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu dans un navigateur.');

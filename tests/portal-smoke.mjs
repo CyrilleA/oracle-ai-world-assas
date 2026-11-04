@@ -116,3 +116,10 @@ run("navigate('scm');state.scmView=0;render()");
 assert.ok(!nodes.get('#main').innerHTML.includes('Animer le jeu de découverte SCM'));
 assert.ok(nodes.get('#main').innerHTML.includes('75 %'));assert.ok(nodes.get('#main').innerHTML.includes('Calendriers prévisionnels'));
 for(let i=0;i<4;i++){run(`state.infraLayer=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('ORACLE_INFRA[state.infraLayer].title')));}
+
+for(let i=0;i<4;i++)assert.ok(fs.existsSync(new URL('../site/'+run(`HISTORY_CARD_MEDIA[${i}].image`),import.meta.url)),'Photographie locale disponible pour la carte '+(i+1));
+run("navigate('frise');state.supplyHistoryDone=false;state.supplyHistoryStep=0;render()");
+assert.ok(!nodes.get('#main').innerHTML.includes('<svg'),'Les pictogrammes sont remplacés par des photographies');
+assert.ok(nodes.get('#main').innerHTML.includes('Carte 1'));
+listeners.get('keydown')({key:'ArrowRight',target:{tagName:'BODY'},preventDefault(){}});check("state.supplyHistoryStep===1&&state.route==='frise'",'Flèche droite : carte suivante, pas chapitre suivant');
+listeners.get('keydown')({key:'ArrowLeft',target:{tagName:'BODY'},preventDefault(){}});check('state.supplyHistoryStep===0','Flèche gauche : carte précédente');

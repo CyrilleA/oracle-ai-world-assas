@@ -38,7 +38,7 @@ def graphic(src):
     elif src.startswith('assets/'):data=ROOT/'site'/src
     else:return None
     with PILImage.open(data) as img:
-        img=img.convert('RGB');img.thumbnail((1400,900)); w,h=img.size
+        rgba=img.convert('RGBA');background=PILImage.new('RGBA',rgba.size,'white');background.alpha_composite(rgba);img=background.convert('RGB');img.thumbnail((1400,900)); w,h=img.size
         stream=io.BytesIO();img.save(stream,format='JPEG',quality=83);stream.seek(0)
     scale=min(480/w,240/h)
     return Image(stream,width=w*scale,height=h*scale)

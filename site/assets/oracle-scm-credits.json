@@ -1,0 +1,26 @@
+[
+  {
+    "file": "assets/oracle-scm-plm.webp",
+    "url": "https://www.oracle.com/cmsng/102251180713455931389381386066615897959.webp?_wsbfilename=rc30v1-wsb-scm-plm-project-man.webp"
+  },
+  {
+    "file": "assets/oracle-scm-planning.webp",
+    "url": "https://www.oracle.com:443/cmsng/102281036066457249278033384811385602031.webp?_wsbfilename=rc30v1-wsb-scm-scp-plan.webp"
+  },
+  {
+    "file": "assets/oracle-scm-procurement.webp",
+    "url": "https://objectstorage.us-phoenix-1.oraclecloud.com/n/axciphqpnohg/b/wsbuilder-assets/o/102579824384453059276081845373484700187.webp?_wsbfilename=rc30v1-wsb-procurement-sourcing-2.webp"
+  },
+  {
+    "file": "assets/oracle-scm-execution.webp",
+    "url": "https://www.oracle.com:443/cmsng/102245893303751940020560968856713078102.webp?_wsbfilename=rc30v1-wsb-scm-exe-manufacturing.webp"
+  },
+  {
+    "file": "assets/oracle-scm-orders.webp",
+    "url": "https://www.oracle.com:443/cmsng/102270019350232871214875563904481640039.webp?_wsbfilename=rc30v1-wsb-scm-om-promising.webp"
+  },
+  {
+    "file": "assets/oracle-scm-logistics.webp",
+    "url": "https://www.oracle.com/cmsng/102274026128026712889281523799071694682.webp?_wsbfilename=rc30v1-wsb-scm-log-tm2.webp"
+  }
+]

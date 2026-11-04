@@ -70,3 +70,5 @@ python3 scripts/build-presentation-pdf.py
 Le générateur Python utilise `reportlab`, `svglib`, `lxml` et `Pillow`, ainsi que les polices Arial de macOS. Vérifier visuellement le PDF rendu avant publication. Le fichier PDF est versionné et déployé avec les autres fichiers statiques.
 
 Dans Explorer SCM, les cartes 1 et 6 des infrastructures proposent la vidéo officielle Oracle « Oracle AI Data Center Expansion: Progress in Motion » (1 min 26), avec lecture intégrée à la demande et lien YouTube de secours.
+
+Les six cartes métiers SCM contiennent des captures produit officielles Oracle, stockées localement, créditées et agrandissables. Les URL d’origine figurent dans `site/assets/oracle-scm-credits.json`. Les mêmes visuels sont inclus dans le PDF.

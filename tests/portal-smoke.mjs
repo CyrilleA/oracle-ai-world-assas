@@ -59,10 +59,15 @@ for(let i=0;i<5;i++){
 run("navigate('scm')");
 for(let i=0;i<6;i++){run(`state.module=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MODULES[state.module].question')));}
 run("navigate('deleguer')");
-assert.ok(nodes.get('#main').innerHTML.includes('La référence fiable de l’entreprise.'));
-assert.ok(nodes.get('#main').innerHTML.includes('Le System of Record reste le socle.'));
-assert.ok(nodes.get('#main').innerHTML.includes('data:image/svg+xml;base64,'));
-run("action('record-image')");assert.ok(nodes.get('#modal').innerHTML.includes('System of Record'));run('closeModal()');
+assert.ok(nodes.get('#main').innerHTML.includes('Oracle Fusion Cloud SCM'));
+assert.ok(!nodes.get('#main').innerHTML.includes('id="outcome-layer"'),'Le socle SCM apparaît seul au départ');
+for(const domain of ['Concevoir','Planifier','Acheter','Produire','Promettre','Livrer'])assert.ok(nodes.get('#main').innerHTML.includes(domain));
+run("action('outcome-toggle')");assert.ok(nodes.get('#main').innerHTML.includes('id="outcome-layer"'));
+assert.ok(nodes.get('#main').innerHTML.includes('Fusion Claw'));
+assert.ok(nodes.get('#main').innerHTML.includes('AI Agent Studio'));
+assert.ok(nodes.get('#main').innerHTML.includes('Oracle Fusion Cloud SCM'),'Le socle reste visible sous la couche');
+run("action('outcome-replay')");check('state.outcomeLayer===true','Rejouer conserve la couche');
+run("action('outcome-toggle')");assert.ok(!nodes.get('#main').innerHTML.includes('id="outcome-layer"'));
 run("navigate('atelier');action('workshop-reset')");
 check('totals().available===600&&totals().margin===52000&&!totals().valid','Stock initial : résultat et priorité B');
 run("action('apply-reference')");

@@ -239,6 +239,7 @@ function workflowOfferReport(original,m,existing=false){
  if(cost!==null&&cost>g.budget)errors.push('Le budget maximal serait dépassé.');
  if(existing&&m.dependencyIds?.some(id=>!accepted(g).some(d=>d.id===id)))errors.push('Un engagement amont a été remplacé ou libéré : une reconfirmation est nécessaire.');
  const request=g.documents.find(d=>d.id===m.requestId);if(request&&m.delivery>request.delivery)warnings.push('L’heure proposée dépasse l’heure demandée : le destinataire devra accepter cette alternative.');
+ if(request&&q>request.quantity)warnings.push('Volume supérieur à la demande : le destinataire doit accepter explicitement cette quantité.');
  if(request&&q<request.quantity)warnings.push('Réponse partielle : le reste du besoin devra être couvert par une autre offre.');
  return {ok:errors.length===0,reasons:[...new Set(errors)],warnings,available,earliest,cost};
 }
@@ -246,13 +247,16 @@ export function workflowHealth(g,m){const r=workflowOfferReport(g,m,true);return
 function workflowCandidate(g,p,b){
  const request=g.documents.find(d=>d.id===b.requestId&&d.type==='request'&&d.to===p.role);
  if(!request)fail('Sélectionnez une demande reçue par votre équipe.');
- const replacesId=String(b.replacesId||request.replacesId||'');
+ const editId=String(b.editId||''),edited=editId?g.documents.find(d=>d.id===editId&&d.type==='offer'&&d.status==='pending'&&d.round===g.round&&d.from===p.role&&d.to===request.from&&d.requestId===request.id):null;
+ if(editId&&!edited)fail('Cette offre a déjà été traitée ou ne vous appartient pas. Rechargez les échanges.',409);
+ const replacesId=String(b.replacesId||edited?.replacesId||request.replacesId||'');
+ if(edited&&replacesId!==String(edited.replacesId||''))fail('La modification doit conserver l’engagement à réviser.',409);
  if(replacesId){const old=g.documents.find(d=>d.id===replacesId&&d.type==='offer'&&d.status==='accepted'&&d.from===p.role&&d.to===request.from);if(!old)fail('L’engagement à réviser n’est plus actif.');}
  if(!replacesId&&['rejected','closed'].includes(request.status))fail('Cette demande est clôturée ou refusée.');
  const quantity=Number(b.quantity),delivery=Number(b.delivery),unitPrice=['buying','planning'].includes(p.role)?0:Number(b.unitPrice);
- if(!Number.isInteger(quantity)||quantity<1||quantity>request.quantity||!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>10000||!Number.isInteger(delivery)||delivery<780||delivery>1439)fail('Vérifiez la quantité (dans le besoin demandé), le prix et l’heure (13 h à 23 h 59).');
+ if(!Number.isInteger(quantity)||quantity<1||quantity>(supplierRole(p.role)||p.role==='buying'?120:request.quantity)||!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>10000||!Number.isInteger(delivery)||delivery<780||delivery>1439)fail('Vérifiez la quantité autorisée (1 à 120 pour les Fournisseurs et les Achats), le prix et l’heure (13 h à 23 h 59).');
  const transport=b.transport==='express'?'express':'normal';
- return {type:'offer',from:p.role,to:request.from,requestId:request.id,replacesId:replacesId||null,quantity,unitPrice,delivery,transport,...(supplierRole(p.role)&&g.productionWindows?.[p.role]?{productionStart:g.productionWindows[p.role].start}:{}),text:String(b.text||'').trim().slice(0,1200)};
+ return {type:'offer',from:p.role,to:request.from,requestId:request.id,...(edited?{editedOfferId:edited.id}:{}),replacesId:replacesId||null,quantity,unitPrice,delivery,transport,...(supplierRole(p.role)&&g.productionWindows?.[p.role]?{productionStart:g.productionWindows[p.role].start}:{}),text:String(b.text||'').trim().slice(0,1200)};
 }
 export function workflowCheck(g,p,b){
  if(g.workflow!==2)fail('Créez une nouvelle séance pour utiliser le parcours structuré.');
@@ -285,7 +289,8 @@ export function workflowAct(g,p,op,b){
  if(op==='request'){if(b.replacesId)fail('Utilisez l’action Renégocier sur l’engagement concerné.');workflowRequest(g,p,b);return;}
  if(op==='quote'){
   const m=workflowCandidate(g,p,b),report=workflowOfferReport(g,m);if(!report.ok)fail(report.reasons.join(' '),409);
-  if(!m.replacesId){const covered=accepted(g).filter(d=>d.requestId===m.requestId).reduce((n,d)=>n+d.quantity,0);if(covered+m.quantity>g.documents.find(d=>d.id===m.requestId).quantity)fail('Les réponses déjà commandées couvrent cette demande.',409);}
+  if(!m.replacesId){const covered=accepted(g).filter(d=>d.requestId===m.requestId).reduce((n,d)=>n+d.quantity,0);if(covered>=g.documents.find(d=>d.id===m.requestId).quantity||(!(supplierRole(p.role)||p.role==='buying')&&covered+m.quantity>g.documents.find(d=>d.id===m.requestId).quantity))fail('Les réponses déjà commandées couvrent cette demande.',409);}
+  if(m.editedOfferId)g.documents.find(d=>d.id===m.editedOfferId).status='superseded';
   m.status='pending';m.dependencyIds=workflowDependencies(workflowBase(g,m),p.role);appendWorkflow(g,m);log(g,p.role,`${m.ref} · Proposition de ${m.quantity} unités à ${clock(m.delivery)}${m.replacesId?' · révision d’un engagement':''}`);return;
  }
  const m=workflowDoc(g,b);
@@ -305,11 +310,11 @@ export function workflowAct(g,p,op,b){
   if(!originalRequest||originalRequest.status==='rejected')fail('La demande a été refusée.',409);
   if(m.replacesId&&!g.documents.some(d=>d.id===m.replacesId&&d.status==='accepted'))fail('L’engagement remplacé n’est plus actif.',409);
   const base=workflowBase(g,m),report=workflowOfferReport(g,m);if(!report.ok)fail('Engagement impossible : '+report.reasons.join(' '),409);
-  const covered=accepted(base).filter(d=>d.requestId===m.requestId).reduce((n,d)=>n+d.quantity,0);if(covered+m.quantity>originalRequest.quantity)fail('La demande est déjà couverte par un autre engagement.',409);
+  const covered=accepted(base).filter(d=>d.requestId===m.requestId).reduce((n,d)=>n+d.quantity,0);if(covered>=originalRequest.quantity||(!(supplierRole(m.from)||m.from==='buying')&&covered+m.quantity>originalRequest.quantity))fail('La demande est déjà couverte par un autre engagement.',409);
   if(['buying','ops','planning'].includes(m.from)&&accepted(base,m.from).length)fail('Un engagement est déjà actif pour cette équipe. Utilisez une révision pour le remplacer.',409);
   if(m.replacesId){g.documents.find(d=>d.id===m.replacesId).status='superseded';}
   m.status='accepted';m.acceptedAt=Date.now();m.orderRef='ENG-'+String(g.documents.filter(d=>d.acceptedAt).length).padStart(3,'0');m.dependencyIds=workflowDependencies(g,m.from);
-  originalRequest.status=covered+m.quantity===originalRequest.quantity?'closed':'partial';
+  originalRequest.status=covered+m.quantity>=originalRequest.quantity?'closed':'partial';
   if(m.from==='planning')g.promise={quantity:m.quantity,delivery:m.delivery};
   log(g,p.role,`${m.orderRef} · ${m.ref} accepté : ${m.quantity} unités à ${clock(m.delivery)} · ressources réservées`);return;
  }

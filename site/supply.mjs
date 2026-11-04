@@ -1,5 +1,5 @@
 import {timerBanner,tickCountdown} from './supply-timing.mjs?v=outils-oracle-20261104';
-import {renderWorkflow,nextTask} from './supply-workflow.mjs?v=production-20261104';
+import {renderWorkflow,nextTask} from './supply-workflow.mjs?v=volumes-20261104';
 import {esc,configuration,api,save,load,roomCode,validRoom} from './live-common.mjs';
 import {metrics,messageCard,teamName,inventoryCards} from './supply-ui.mjs';
 const main=document.querySelector('#student'),network=document.querySelector('#network');

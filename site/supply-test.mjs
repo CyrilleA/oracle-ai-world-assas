@@ -1,5 +1,5 @@
 import {esc,configuration,api,load,validRoom} from './live-common.mjs';
-import {renderWorkflow} from './supply-workflow.mjs?v=production-20261104';
+import {renderWorkflow} from './supply-workflow.mjs?v=volumes-20261104';
 import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=profil-test-20261104';
 import {tickCountdown} from './supply-timing.mjs';
 const $=s=>document.querySelector(s),root=$('#test-player');

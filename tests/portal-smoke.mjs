@@ -59,7 +59,10 @@ for(let i=0;i<5;i++){
 run("navigate('scm')");
 for(let i=0;i<6;i++){run(`state.module=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MODULES[state.module].question')));}
 run("navigate('deleguer')");
-for(let m=0;m<3;m++)for(let s=0;s<4;s++){run(`state.mission=${m};state.step=${s};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MISSIONS[state.mission].steps[state.step][0]')));}
+assert.ok(nodes.get('#main').innerHTML.includes('La référence fiable de l’entreprise.'));
+assert.ok(nodes.get('#main').innerHTML.includes('Le System of Record reste le socle.'));
+assert.ok(nodes.get('#main').innerHTML.includes('data:image/svg+xml;base64,'));
+run("action('record-image')");assert.ok(nodes.get('#modal').innerHTML.includes('System of Record'));run('closeModal()');
 run("navigate('atelier');action('workshop-reset')");
 check('totals().available===600&&totals().margin===52000&&!totals().valid','Stock initial : résultat et priorité B');
 run("action('apply-reference')");
@@ -95,5 +98,5 @@ assert.ok(!/__(HERO|SOURCES)__/.test(html),'Aucun emplacement incomplet');
 assert.equal((html.match(/<script>/g)||[]).length,1,'Un script embarqué');
 assert.ok(!/<script[^>]*src=|<link[^>]*href=/.test(html),'Aucune dépendance réseau au chargement');
 const durations=[15,40,25,15,30,50,5];assert.equal(durations.reduce((a,b)=>a+b,0),180);
-console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,12 étapes IA,simulateur,25 sources et180 minutes.');
+console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,simulateur,25 sources et180 minutes.');
 console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu dans un navigateur.');

@@ -114,7 +114,7 @@ console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu 
 
 run("navigate('scm');state.scmView=0;render()");
 assert.ok(!nodes.get('#main').innerHTML.includes('Animer le jeu de découverte SCM'));
-assert.ok(nodes.get('#main').innerHTML.includes('75 %'));assert.ok(nodes.get('#main').innerHTML.includes('Calendriers prévisionnels'));
+run('state.infraLayer=4;render()');assert.ok(nodes.get('#main').innerHTML.includes('75 %'));run('state.infraLayer=5;render()');assert.ok(nodes.get('#main').innerHTML.includes('Calendriers prévisionnels'));
 for(let i=0;i<4;i++){run(`state.infraLayer=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('ORACLE_INFRA[state.infraLayer].title')));}
 
 for(let i=0;i<4;i++)assert.ok(fs.existsSync(new URL('../site/'+run(`HISTORY_CARD_MEDIA[${i}].image`),import.meta.url)),'Photographie locale disponible pour la carte '+(i+1));
@@ -123,3 +123,13 @@ assert.ok(!nodes.get('#main').innerHTML.includes('<svg'),'Les pictogrammes sont 
 assert.ok(nodes.get('#main').innerHTML.includes('Carte 1'));
 listeners.get('keydown')({key:'ArrowRight',target:{tagName:'BODY'},preventDefault(){}});check("state.supplyHistoryStep===1&&state.route==='frise'",'Flèche droite : carte suivante, pas chapitre suivant');
 listeners.get('keydown')({key:'ArrowLeft',target:{tagName:'BODY'},preventDefault(){}});check('state.supplyHistoryStep===0','Flèche gauche : carte précédente');
+
+// Navigation séquentielle : une seule carte active, bornes et raccourcis préservés.
+for(const [route,key,total] of [['enterprise','enterprise',3],['scm','infra',7],['ai-world','features',5],['deleguer','record',2],['demos','game',8]]){
+ run(`navigate('${route}');${route==='scm'?'state.scmView=0;':''}state[LESSON_DECKS['${key}'].field]=0;render()`);
+ assert.ok(nodes.get('#main').innerHTML.includes('Carte 1'));
+ for(let step=1;step<total;step++){run(`lessonStep('${key}',1)`);assert.ok(nodes.get('#main').innerHTML.includes('Carte '+(step+1)));}
+ run(`lessonStep('${key}',1)`);check(`Number(state[LESSON_DECKS['${key}'].field])===${total-1}`,'Pas de débordement de carte');
+ run(`lessonStep('${key}',-1)`);check(`Number(state[LESSON_DECKS['${key}'].field])===${total-2}`,'Retour à la carte précédente');
+}
+run("navigate('ai-world');state.feature=0;render()");listeners.get('keydown')({key:'ArrowRight',target:{tagName:'BODY'},preventDefault(){}});check("state.feature===1&&state.route==='ai-world'",'Les flèches parcourent les cartes avant de changer de chapitre');

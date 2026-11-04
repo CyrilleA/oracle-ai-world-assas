@@ -1,7 +1,7 @@
 import {financeImpact} from './supply-finance.mjs';
 export const ROLES=[
  {id:'client',name:'Client',mission:'Obtenir 80 coffrets avant 19 h. Accepter ou renégocier la promesse.'},
- {id:'planning',name:'Planification',mission:'Coordonner les équipes, construire le plan et faire confirmer la promesse au client.'},
+ {id:'planning',name:'Planification',mission:'Donner le rythme : solliciter et relancer les équipes, confirmer le plan et faire accepter la promesse client.'},
  {id:'buying',name:'Achats',mission:'Consulter les fournisseurs, négocier et accepter leurs offres.'},
  {id:'supplierA',name:'Fournisseur A',mission:'Répondre aux consultations en respectant votre prix minimum, votre stock et votre délai.'},
  {id:'supplierB',name:'Fournisseur B',mission:'Négocier une alternative en tenant compte du stock, des matières et de la fabrication.'},
@@ -91,7 +91,7 @@ export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA
  }
  if(role==='ops')return `Capacité : ${r.capacity} coffrets.${r.packagingStock===undefined?'':` Stock d’emballages : ${r.packagingStock} ; un emballage nécessaire par coffret.`} Cadence : ${r.rate} coffrets/heure après réception de tous les composants. Prix de préparation minimum : ${money(r.minPrice)} par coffret. Transport normal : ${transportOption(g,'normal').duration} min, ${money(transportOption(g,'normal').cost)}, au plus ${transportOption(g,'normal').capacity} coffrets. Express : ${transportOption(g,'express').duration} min, ${money(transportOption(g,'express').cost)}, au plus ${transportOption(g,'express').capacity} coffrets. Composants bloqués par la qualité : ${r.quarantine}. Communiquez les impacts aux autres équipes.`;
  if(role==='buying')return 'Un composant acheté permet de préparer un coffret. Consultez les deux fournisseurs sur le prix, le stock disponible et les délais des quantités à fabriquer. Un stock déjà engagé ne peut pas être vendu une seconde fois. Vous seul acceptez leurs offres. Les achats acceptés consomment le budget même si tous les composants ne sont pas utilisés.';
- if(role==='planning')return 'Demandez aux achats leurs approvisionnements et aux opérations une offre de préparation/livraison. Acceptez l’offre Opérations, proposez une promesse au Client, puis confirmez un plan. Le site vérifie le coût et les capacités réels.';
+ if(role==='planning')return 'Vous donnez le rythme : lancez la demande aux Achats et relancez-les si nécessaire. Acceptez leurs approvisionnements, puis sollicitez la Livraison. Après acceptation de son offre, confirmez le plan et proposez la promesse au Client. Vérifiez qu’il l’a acceptée avant la fin réelle du jeu. Le site contrôle le coût et les capacités.';
  return `Besoin actuel : ${g.demand} coffrets. Budget total maximal : ${money(g.budget)}. Promesse actuelle : ${g.promise.quantity} coffrets avant ${clock(g.promise.delivery)}. Vous seul acceptez une nouvelle promesse proposée par la planification.`;}
 export function view(g,p,admin=false,ready=false){
  const role=p?.role||'',team=ROLES.find(r=>r.id===role);

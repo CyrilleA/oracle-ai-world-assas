@@ -11,7 +11,7 @@ export function replayWithAI(g){
  if(g.workflow!==2||stage(g)!=='human'||!g.experiment)throw Error('Démarrez d’abord la phase humaine.');
  const e=g.experiment,r=report(g);e.reports.push(r);e.archive={documents:g.documents,messages:g.messages,events:g.events,log:g.log,plan:g.plan,financeHistory:g.financeHistory||[]};
  const fresh=initialGame(g.code);for(const k of ['documents','messages','proposals','events','log','plan','aiUsed','aiTickets','drafts','financeHistory'])g[k]=fresh[k]??[];
- Object.assign(g,structuredClone(e.baseline));g.economics=structuredClone(e.baseline.economics||economics(initialGame(g.code)));g.round=1;g.phase='running';g.aiEnabled=true;g.aiLimit=6;
+ Object.assign(g,structuredClone(e.baseline));g.economics=structuredClone(e.baseline.economics||economics(initialGame(g.code)));g.round=1;g.phase='running';g.finishedReason=null;g.aiEnabled=true;g.aiLimit=6;
  g.experiment={...e,stage:'ai',startedAt:Date.now(),endedAt:null,jobs:{},history:[]};
 }
 export function publicExperiment(g,p,admin=false){

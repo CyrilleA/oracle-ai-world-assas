@@ -1,5 +1,6 @@
+import {tickCountdown} from './supply-timing.mjs?v=rythme-20261104';
 import {esc,configuration,api,save,load,validRoom} from './live-common.mjs';
-import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=rentabilite-20261104';
+import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=rythme-20261104';
 let base='',key='',code='',snapshot='',pollTimer=null,busy=false,kind=load('assas-active-kind')||'quiz';
 const sessionPath=()=>`/api/${kind==='supply'?'supply-sessions':'sessions'}/${code}`;
 const $=s=>document.querySelector(s),error=s=>{$('#host-error').textContent=s;};
@@ -61,3 +62,5 @@ if(['scm','supply'].includes(params.get('game')))$('#game-type').value=params.ge
 if(key)restoreSession();
 
 async function supplyControl(body){if(busy)return;busy=true;try{const r=await api(base,sessionPath()+'/control',{token:key,body});snapshot=JSON.stringify(r);show(r);error('');const feedback=$('[data-control-status]');if(feedback)feedback.textContent=body.command==='limit'?'Nouvelle limite appliquée. Le plan est recalculé et l’équipe concernée a été informée.':'Action appliquée. Les activités sont à jour.';}catch(e){error(e.message);}finally{busy=false;}}
+
+setInterval(()=>tickCountdown($('#dashboard')),1000);

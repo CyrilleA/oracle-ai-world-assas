@@ -1,5 +1,5 @@
 import {initialGame,view,act,assess,captain} from './supply-game.mjs';
-import {nextTask} from '../site/supply-tasks.mjs';
+import {nextTask,proposalExplanation as safeExplanation} from '../site/supply-tasks.mjs';
 export const stage=g=>g.experiment?.stage||'human';
 export function startExperiment(g){
  if(g.workflow!==2)return;
@@ -56,10 +56,4 @@ export function confirmAuto(g,p,id){
  validateAction(g,p,j.action,j.payload);
  if(j.action==='quote'&&p.role==='planning')act(g,p,'plan',{quantity:j.payload.quantity,transport:j.payload.transport});
  act(g,p,j.action,{...j.payload,text:safeExplanation(j)});g.documents.at(-1).ai=true;j.status='sent';j.sentAt=Date.now();
-}
-
-export function safeExplanation(j){
- const b=j.payload;if(!b)return '';
- const at=`${String(Math.floor(b.delivery/60)).padStart(2,'0')}:${String(b.delivery%60).padStart(2,'0')}`;
- return j.action==='request'?`Demander ${b.quantity} unités avant ${at}. La disponibilité et le délai restent à confirmer par l’équipe destinataire.`:`Proposer ${b.quantity} unités à ${at}${b.unitPrice?' pour '+(b.unitPrice/100).toLocaleString('fr-FR')+' € par unité':''}. Cette option respecte les ressources vérifiées au moment de la préparation ; le destinataire doit encore l’accepter.`;
 }

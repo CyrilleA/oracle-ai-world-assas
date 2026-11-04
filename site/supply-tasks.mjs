@@ -79,3 +79,9 @@ export function nextTask(s){
  if(s.role==='client'&&docs.some(d=>live(d)&&d.to==='client'))return {...task,waitingOn:[],complete:true};
  return waiting(['planning'],'La Planification organise votre demande.','Elle attend les engagements des Achats et de la Livraison avant de vous répondre.','Vous pourrez accepter sa promesse ou demander une autre solution.');
 }
+
+export function proposalExplanation(j){
+ const b=j.payload;if(!b)return '';
+ const at=`${String(Math.floor(b.delivery/60)).padStart(2,'0')}:${String(b.delivery%60).padStart(2,'0')}`;
+ return j.action==='request'?`Demander ${b.quantity} unités avant ${at}. La disponibilité et le délai restent à confirmer par l’équipe destinataire.`:`Proposer ${b.quantity} unités à ${at}${b.unitPrice?' pour '+(b.unitPrice/100).toLocaleString('fr-FR')+' € par unité':''}. Cette option respecte les ressources vérifiées au moment de la préparation ; le destinataire doit encore l’accepter.`;
+}

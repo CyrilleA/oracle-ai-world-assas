@@ -23,7 +23,7 @@ try{
  await api(path+'/assist',token,{to:'buying',text:'Préparer'},409);await api(path+'/control',admin,{command:'ai',enabled:true,limit:3},409);assert.equal(calls,0);
  await api(path+'/control',admin,{command:'ai-replay'});
  let s;for(let i=0;i<40;i++){s=await api(path+'/state',token);if(s.autoDraft?.status==='ready')break;await new Promise(r=>setTimeout(r,100));}
- assert.equal(s.autoDraft?.status,'ready');assert.equal(calls,1);assert.equal(s.documents.length,1,'Un brouillon IA ne doit pas créer de demande');assert.equal(captured.model,'gpt-5-nano');assert.equal(captured.store,false);assert.equal(captured.text.format.strict,true);
+ assert.equal(s.autoDraft?.status,'ready');assert.match(s.autoDraft.reason,/Demander 80 unités/);assert.match(s.autoDraft.reason,/restent à confirmer/);assert.equal(calls,1);assert.equal(s.documents.length,1,'Un brouillon IA ne doit pas créer de demande');assert.equal(captured.model,'gpt-5-nano');assert.equal(captured.store,false);assert.equal(captured.text.format.strict,true);
  const context=JSON.parse(captured.input);assert.ok(!captured.input.includes(token));assert.ok(!captured.input.includes('supplierA":{'));assert.equal(context.ownConstraints,null);
  await api(path+'/state',token);assert.equal(calls,1,'Pas de nouvel appel pour le même contexte');
  await api(path+'/auto-confirm','',{id:s.autoDraft.id},401);

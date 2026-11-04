@@ -175,7 +175,7 @@ function workflowSources(g){
  const rows=['supplierA','supplierB'].map(id=>{const orders=accepted(g,id);return {quantity:Math.min(supplierCapacity(g.resources[id]),orders.reduce((n,d)=>n+d.quantity,0)),delivery:orders.length?Math.max(supplierDelivery(g.resources[id],orders.reduce((n,d)=>n+d.quantity,0)),...orders.map(d=>d.delivery)):0,cost:orders.reduce((n,d)=>n+d.quantity*d.unitPrice,0)};});
  return {quantity:Math.max(0,rows.reduce((n,r)=>n+r.quantity,0)-g.resources.ops.quarantine),delivery:Math.max(...rows.map(r=>r.delivery)),cost:rows.reduce((n,r)=>n+r.cost,0)};
 }
-function workflowInputs(g){const sourcing=accepted(g,'buying').at(-1),source=workflowSources(g),quantity=Math.min(sourcing?.quantity||0,source.quantity);return {ready:!!sourcing&&workflowHealth(g,sourcing).ok&&quantity>0,quantity:sourcing&&workflowHealth(g,sourcing).ok?quantity:0};}
+function workflowInputs(g){const sourcing=accepted(g,'buying').at(-1),source=workflowSources(g),quantity=Math.min(sourcing?.quantity||0,source.quantity),confirmed=!!sourcing&&workflowHealth(g,sourcing).ok,ready=confirmed&&quantity>0;return {ready,quantity:confirmed?quantity:0,waitingOn:ready?[]:!sourcing&&g.documents.some(d=>d.type==='offer'&&d.from==='buying'&&d.to==='planning'&&d.status==='pending'&&d.round===g.round)?['planning']:['buying']};}
 function workflowBase(g,m){return m.replacesId?{...g,documents:g.documents.filter(d=>d.id!==m.replacesId)}:g;}
 function workflowDependencies(g,role){return accepted(g).filter(d=>role==='buying'?supplierRole(d.from):role==='ops'?supplierRole(d.from)||d.from==='buying':role==='planning'?['buying','ops'].includes(d.from):false).map(d=>d.id);}
 function workflowOfferReport(original,m,existing=false){

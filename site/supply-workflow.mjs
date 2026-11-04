@@ -69,7 +69,7 @@ export function nextTask(s){
   return waiting(['buying'],'Les Achats doivent vous consulter.','Aucune demande de prix à traiter pour le moment.','Vous pourrez indiquer la quantité, le prix et le délai que vous pouvez tenir.');
  }
  if(s.role==='ops'){
-  if(s.inputs?.ready===false&&(docs.some(d=>d.type==='request'&&d.to==='ops'&&!['closed','rejected'].includes(d.status))||docs.some(d=>live(d)&&d.from==='ops')))return waiting(['buying'],'Les composants doivent être confirmés.','Votre demande est reçue, mais les approvisionnements ne sont pas encore confirmés.','Vous pourrez proposer la préparation et la livraison des coffrets.');
+  if(s.inputs?.ready===false&&(docs.some(d=>d.type==='request'&&d.to==='ops'&&!['closed','rejected'].includes(d.status))||docs.some(d=>live(d)&&d.from==='ops')))return waiting(s.inputs.waitingOn?.length?s.inputs.waitingOn:['buying'],'Les composants doivent être confirmés.',s.inputs.waitingOn?.includes('planning')?'Les Achats ont proposé une solution. La Planification doit maintenant la valider.':'Votre demande est reçue, mais les Achats doivent encore confirmer les approvisionnements.','Vous pourrez proposer la préparation et la livraison des coffrets.');
   if(docs.some(d=>live(d)&&d.from==='ops'))return {...task,title:'Votre livraison est confirmée.',text:'La Planification s’appuie sur votre engagement pour répondre au Client.',waitingOn:[],complete:true};
   return waiting(['planning'],'La Planification doit vous solliciter.','Vous n’avez pas encore reçu de demande de préparation et de livraison.','Vous pourrez vérifier vos capacités et proposer votre solution.');
  }

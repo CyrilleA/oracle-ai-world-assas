@@ -12,7 +12,7 @@ try{
  assert.equal(workflowHealth(scheduling,scheduling.documents[1]).ok,true,'Le stock réservé en premier reste réalisable');
  assert.equal(workflowHealth(scheduling,scheduling.documents[2]).ok,false,'La seconde réservation utilise bien la fabrication, même à horodatage identique');
  const partial=initialGame('PARTIAL1');partial.documents.push({id:'source',from:'supplierA',to:'buying',type:'offer',status:'accepted',quantity:60,unitPrice:1000,delivery:900,acceptedAt:1,orderRef:'ENG-001'},{id:'internal',from:'buying',to:'planning',type:'offer',status:'accepted',quantity:60,unitPrice:0,delivery:900,acceptedAt:2,orderRef:'ENG-002',dependencyIds:['source']},{id:'service',from:'planning',to:'ops',type:'request',status:'open',quantity:80,delivery:1140});
- assert.deepEqual(view(partial,{id:'P1',role:'ops'}).inputs,{ready:true,quantity:60});
+ assert.deepEqual(view(partial,{id:'P1',role:'ops'}).inputs,{ready:true,quantity:60,waitingOn:[]});
  assert.equal(workflowCheck(partial,{id:'P1',role:'ops'},{requestId:'service',quantity:60,unitPrice:500,delivery:1140}).ok,true,'Une réponse partielle reste possible après confirmation partielle');
  assert.equal(view(partial,{id:'P2',role:'supplierB'}).inputs,null,'La disponibilité de préparation n’est partagée qu’avec les Opérations');
  const {token:admin}=await api('/api/login','',{password:'TEST-only-12345'});
@@ -51,7 +51,7 @@ try{
  assert.equal((await state(teams.supplierA)).documents.some(d=>d.from==='supplierB'),false);
  assert.equal((await state(teams.ops)).inputs.ready,false,'Les Opérations attendent la confirmation interne, même si les fournisseurs ont répondu');
  await act('ops','quote',{requestId:service.id,quantity:80,unitPrice:500,delivery:1080},409);
- const buying=await quote('buying',sourcing,80,0,900);await accept('planning',buying);assert.equal((await state(teams.ops)).inputs.ready,true);assert.equal((await state(teams.ops)).inputs.quantity,80);
+ const buying=await quote('buying',sourcing,80,0,900);assert.deepEqual((await state(teams.ops)).inputs.waitingOn,['planning']);await accept('planning',buying);assert.equal((await state(teams.ops)).inputs.ready,true);assert.equal((await state(teams.ops)).inputs.quantity,80);
  await act('ops','quote',{requestId:service.id,quantity:80,unitPrice:500,delivery:1020},409);
  const operation=await quote('ops',service,80,500,1080,{transport:'normal'});await accept('planning',operation);
  await act('planning','plan',{quantity:80,transport:'express'},409);

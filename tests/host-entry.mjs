@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {hostEntry} from '../site/host-entry.mjs';
+const stored={'assas-active-kind':'supply','assas-active-session':'SUPPLY12'},load=k=>stored[k];
+assert.deepEqual(hostEntry(new URLSearchParams('game=beaujolais'),load),{game:'beaujolais',kind:'quiz',code:''},'Bienvenue ne reprend pas le jeu Supply Chain');
+stored['assas-active-session-beaujolais']='BEAUJO12';
+assert.equal(hostEntry(new URLSearchParams('game=beaujolais'),load).code,'BEAUJO12');
+assert.deepEqual(hostEntry(new URLSearchParams('game=supply'),load),{game:'supply',kind:'supply',code:'SUPPLY12'});
+assert.deepEqual(hostEntry(new URLSearchParams(''),load),{game:null,kind:'supply',code:'SUPPLY12'},'La console générale conserve la reprise de séance');
+assert.equal(hostEntry(new URLSearchParams('game=beaujolais&r=EXPLICIT'),load).code,'EXPLICIT');
+console.log('Accès animateur : questionnaire explicite, séances séparées par jeu et reprise générale vérifiés.');

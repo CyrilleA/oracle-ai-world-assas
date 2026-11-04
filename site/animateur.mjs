@@ -1,10 +1,11 @@
+import {hostEntry} from './host-entry.mjs';
 import {tickCountdown} from './supply-timing.mjs?v=profil-test-20261104';
 import {esc,configuration,api,save,load,validRoom} from './live-common.mjs';
 import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=budget-arbitrage-20261104';
 let base='',key='',code='',snapshot='',pollTimer=null,busy=false,kind=load('assas-active-kind')||'quiz';
 const sessionPath=()=>`/api/${kind==='supply'?'supply-sessions':'sessions'}/${code}`;
 const $=s=>document.querySelector(s),error=s=>{$('#host-error').textContent=s;};
-const params=new URLSearchParams(location.hash.slice(1));
+const params=new URLSearchParams(location.hash.slice(1)),entry=hostEntry(params,load);kind=entry.kind;
 if(validRoom(params.get('r')||''))save('assas-active-session',params.get('r'));
 // L’ancienne clé n’est plus utilisée ni envoyée au serveur.
 if(params.get('key'))history.replaceState(null,'',location.pathname);
@@ -17,6 +18,8 @@ function rememberSession(token,persistent){
 }
 function bars(result,options){return result.received===0?'<p class="status">Aucune réponse à cette question. Aucun pourcentage à interpréter.</p>':result.counts.map((n,i)=>{const pct=Math.round(n/result.received*100);return `<div class="bar-row"><div class="bar-label"><span>${esc(options[i])}</span><strong>${n} · ${pct} %</strong></div><div class="bar" role="img" aria-label="${esc(options[i])} : ${n} réponses, ${pct} pour cent"><span style="width:${pct}%"></span></div></div>`;}).join('');}
 function show(r){
+ save('assas-active-session-'+r.game,r.code);save('assas-active-kind',r.game==='supply'?'supply':'quiz');save('assas-active-session',r.code);$('#game-type').value=r.game;
+
  if(r.game==='supply'){$('#game-type').value='supply';const open=[...$('#dashboard').querySelectorAll('details[id][open]')].map(x=>x.id);const feed=$('#activity-feed'),scroll=feed?.scrollTop||0;$('#dashboard').innerHTML=hostSupply(r);open.forEach(id=>{const el=document.getElementById(id);if(el)el.open=true;});bindHostSupply($('#dashboard'),supplyControl,r);if($('#activity-feed'))$('#activity-feed').scrollTop=scroll;return;}
 
  const revealed=['results','finished'].includes(r.phase),finished=r.phase==='finished',scm=r.game==='scm';
@@ -36,8 +39,9 @@ async function openConsole(){
  await api(base,'/api/admin',{token:key});
  $('#login').hidden=true;$('#host').hidden=false;$('#logout').hidden=false;
  $('#password').value='';$('#login-error').textContent='';
- code=load('assas-active-session')||'';if(!validRoom(code))code='';
- if(code)await refresh();clearInterval(pollTimer);pollTimer=setInterval(refresh,5000);
+ code=entry.code;if(!validRoom(code))code='';
+ if(code&&entry.game){try{const r=await api(base,sessionPath()+'/results',{token:key});if(r.game!==entry.game)code='';}catch(e){if(e.status===401)throw e;code='';}}
+ if(code)await refresh();else if(entry.game){$('#dashboard').innerHTML=`<section class="card"><div class="eyebrow">${entry.game==='beaujolais'?'Questionnaire d’ouverture':'Votre jeu'}</div><h1>${entry.game==='beaujolais'?'Soirée Beaujolais':entry.game==='scm'?'Découvrir Oracle SCM':'Jeu de rôles Supply Chain'}</h1><p>Créez une nouvelle séance pour afficher les questions et le QR code des participants.</p></section>`;$('#network').textContent='Connecté · Prêt à créer la séance';}clearInterval(pollTimer);pollTimer=setInterval(refresh,5000);
 }
 async function login(){
  if(busy)return;busy=true;$('#connect').disabled=true;$('#login-error').textContent='Connexion…';
@@ -58,7 +62,7 @@ $('#create').addEventListener('click',async()=>{if(busy)return;busy=true;$('#cre
 async function refreshAfterCreate(){const r=await api(base,sessionPath()+'/results',{token:key});snapshot=JSON.stringify(r);show(r);}
 $('#projection').addEventListener('click',()=>{const active=document.body.classList.toggle('projection');$('#projection').textContent=active?'Quitter la projection':'Projection';});
 $('#logout').addEventListener('click',()=>{clearInterval(pollTimer);forgetSession();$('#password').value='';$('#host').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;$('#dashboard').innerHTML='';});
-if(['scm','supply'].includes(params.get('game')))$('#game-type').value=params.get('game');
+if(entry.game)$('#game-type').value=entry.game;
 if(key)restoreSession();
 
 async function supplyControl(body){if(busy)return;busy=true;try{const r=await api(base,sessionPath()+'/control',{token:key,body});snapshot=JSON.stringify(r);show(r);error('');const feedback=$('[data-control-status]');if(feedback)feedback.textContent=body.command==='limit'?'Nouvelle limite appliquée. Le plan est recalculé et l’équipe concernée a été informée.':'Action appliquée. Les activités sont à jour.';}catch(e){error(e.message);}finally{busy=false;}}

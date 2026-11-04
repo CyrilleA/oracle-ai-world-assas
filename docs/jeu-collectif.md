@@ -3,7 +3,7 @@
 ## Les deux accès
 
 - Élèves : `site/jeu.html`, sans navigation vers les autres parties de la présentation, sans corrigé et sans résultat collectif.
-- Animateur : `site/animateur.html`, protégé par une clé vérifiée par le serveur Cloudflare. La page est publique, les commandes et résultats exigent l’autorisation serveur.
+- Animateur : `site/animateur.html`, protégé par un mot de passe et une session vérifiés par le serveur Cloudflare. La page est publique, les commandes et résultats exigent l’autorisation serveur.
 
 Le QR code de l’accueil mène uniquement au jeu. Dès qu’une séance est créée dans la console, le QR de l’accueil, ouvert dans le même navigateur, inclut automatiquement son code. La console affiche aussi le QR de la séance. Le QR générique permet de saisir le code projeté.
 
@@ -11,7 +11,7 @@ La présentation générale reste un site public : le QR du jeu ne la présente 
 
 ## Déroulement
 
-1. Ouvrir l’accès animateur et saisir la clé d’animation, ou utiliser le fichier d’accès privé préparé localement.
+1. Ouvrir l’accès animateur et saisir le mot de passe personnel défini dans Cloudflare. Cocher « Rester connecté sur cet appareil » pour conserver la connexion pendant sept jours.
 2. Créer une nouvelle séance avant l’arrivée des élèves. Une séance vide évite de mélanger les essais aux réponses de la classe.
 3. Revenir à l’accueil pour les remerciements et le QR, ou projeter le QR de la console. Garder accueil et console dans le même navigateur.
 4. Ouvrir la première question. Les téléphones suivent l’étape décidée par l’animateur.
@@ -35,11 +35,14 @@ Avec Node.js 24 et `npm ci` :
 
 ```sh
 npx wrangler login --scopes account:read user:read workers_scripts:write
-npx wrangler secret put ADMIN_KEY
+npx wrangler secret put ADMIN_PASSWORD
+npx wrangler secret put SESSION_KEY
 npm run deploy:live
 ```
 
-`ADMIN_KEY` est une clé aléatoire longue, réservée à l’animateur. Elle ne doit pas être committée, intégrée à `live-config.json` ni ajoutée aux QR codes. Après déploiement, renseigner l’origine HTTPS retournée dans `site/live-config.json`, sous la clé `api`, puis publier les fichiers statiques sur GitHub Pages.
+`ADMIN_PASSWORD` est le mot de passe personnel de l’animateur, de 16 à 256 caractères. Il est choisi par l’utilisateur dans le champ Secret du tableau de bord Cloudflare, sans le transmettre dans le chat. `SESSION_KEY` est une clé technique aléatoire réservée au serveur. Aucune de ces valeurs ne doit être committée, intégrée à `live-config.json` ni ajoutée aux QR codes.
+
+Le navigateur ne conserve jamais le mot de passe. Il reçoit un jeton signé valable 12 heures, ou sept jours si l’animateur choisit de rester connecté. Sans mémorisation, le jeton reste dans la session de l’onglet. Un changement du mot de passe invalide tous les jetons précédents. Les essais incorrects sont limités à cinq par adresse réseau sur dix minutes. Les anciens fichiers de clé et liens contenant `#key=` ne permettent plus de se connecter. Après déploiement, renseigner l’origine HTTPS retournée dans `site/live-config.json`, sous la clé `api`, puis publier les fichiers statiques sur GitHub Pages.
 
 Le worker autorise l’origine `https://cyrillea.github.io`. Le backend ne sert pas les fichiers du portail. Les séances sont isolées par un code aléatoire et expirent indépendamment.
 

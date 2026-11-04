@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { OPTIONS, QUESTIONS } from './questions.mjs';
+import {passwordMatches,createSession,validSession,addressKey} from './auth.mjs';
 
 const json = (data, status=200) => Response.json(data, { status, headers: { 'Cache-Control':'no-store' } });
 const ROOM = /^[A-HJ-NP-Z2-9]{8}$/;
@@ -11,14 +12,6 @@ export const totals = (room, index) => {
   return { counts, received, participants:Object.keys(room.players).length };
 };
 const bearer = r => r.headers.get('Authorization')?.replace(/^Bearer /,'') || '';
-async function sameKey(a,b) {
-  if (!a || !b) return false;
-  const enc = new TextEncoder();
-  const x = new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(a)));
-  const y = new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(b)));
-  let result=0; for(let i=0;i<x.length;i++) result |= x[i]^y[i];
-  return result===0;
-}
 
 export default {
   async fetch(request, env) {
@@ -31,12 +24,22 @@ export default {
     if(request.method==='OPTIONS') return wrap(new Response(null,{status:204}));
     const u=new URL(request.url);
     if (u.pathname==='/api/health' && request.method==='GET') return wrap(json({ok:true}));
-    if(!env.ADMIN_KEY) return wrap(json({error:'Service en cours de configuration.'},503));
     try {
-      const admin=await sameKey(bearer(request),env.ADMIN_KEY);
-      if(u.pathname==='/api/admin' && request.method==='GET') return wrap(admin?json({ok:true}):json({error:'Clé d’animation invalide.'},401));
+      if(u.pathname==='/api/login' && request.method==='POST') {
+        if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<16||!env.SESSION_KEY) return wrap(json({error:'Le mot de passe animateur n’a pas encore été configuré.'},503));
+        const raw=await request.text();if(raw.length>2048)return wrap(json({error:'Requête trop volumineuse.'},413));
+        let body;try{body=JSON.parse(raw);}catch{return wrap(json({error:'Requête invalide.'},400));}
+        const valid=await passwordMatches(body.password,env.ADMIN_PASSWORD);
+        const gate=env.LOGIN_LIMITS.get(env.LOGIN_LIMITS.idFromName(await addressKey(request,env)));
+        const check=await gate.fetch(new Request('https://auth/attempt',{method:'POST',body:JSON.stringify({valid})}));
+        if(check.status===429)return wrap(json({error:'Trop de tentatives. Réessayez dans dix minutes.'},429));
+        if(!valid)return wrap(json({error:'Mot de passe incorrect.'},401));
+        return wrap(json(await createSession(env,body.remember===true)));
+      }
+      const admin=await validSession(bearer(request),env);
+      if(u.pathname==='/api/admin' && request.method==='GET') return wrap(admin?json({ok:true}):json({error:'Connectez-vous pour ouvrir la console.'},401));
       if(u.pathname==='/api/sessions' && request.method==='POST') {
-        if(!admin) return wrap(json({error:'Clé d’animation invalide.'},401));
+        if(!admin) return wrap(json({error:'Connectez-vous pour ouvrir la console.'},401));
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         // 40 bits of random room code. Only an authenticated teacher may create a room.
         const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),v=>alphabet[v%32]).join('');
@@ -57,6 +60,22 @@ export default {
     } catch { return wrap(json({error:'Le service est momentanément indisponible. Réessayez.'},500)); }
   }
 };
+
+export class LoginLimit extends DurableObject {
+  constructor(ctx,env){super(ctx,env);this.ctx=ctx;}
+  async alarm(){await this.ctx.storage.deleteAll();}
+  async fetch(request){
+    const {valid}=await request.json();
+    return this.ctx.blockConcurrencyWhile(async()=>{
+      const now=Date.now();let state=await this.ctx.storage.get('attempts');
+      if(!state||state.until<=now)state={count:0,until:now+10*60*1000};
+      if(state.count>=5)return json({allowed:false},429);
+      if(valid){await this.ctx.storage.deleteAll();return json({allowed:true});}
+      state.count++;await this.ctx.storage.put('attempts',state);await this.ctx.storage.setAlarm(state.until);
+      return json({allowed:false});
+    });
+  }
+}
 
 export class QuizRoom extends DurableObject {
   constructor(ctx,env) { super(ctx,env); this.ctx=ctx; }

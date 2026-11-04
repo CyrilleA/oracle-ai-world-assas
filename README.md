@@ -21,7 +21,7 @@ Le fichier `site/index.html` fonctionne aussi directement dans un navigateur. So
 - Les schémas d’Agentic Enterprise s’agrandissent au clic.
 - Le simulateur TECHINDUS conserve les choix sur l’appareil utilisé, si le navigateur autorise le stockage local.
 
-Les notes, scénarios et corrigés de la présentation font partie du site public. Le QR code mène à une page de jeu distincte (`jeu.html`), sans navigation vers la présentation. La console (`animateur.html`) crée une séance et projette les résultats après clôture du vote. Ses commandes et agrégats sont protégés par une clé vérifiée sur le serveur Cloudflare.
+Les notes, scénarios et corrigés de la présentation font partie du site public. Le QR code mène à une page de jeu distincte (`jeu.html`), sans navigation vers la présentation. La console (`animateur.html`) crée une séance et projette les résultats après clôture du vote. Ses commandes et agrégats sont protégés par un mot de passe et une session vérifiés sur le serveur Cloudflare.
 
 Voir [le guide du jeu collectif](docs/jeu-collectif.md) pour le déroulement, la configuration et la portée de cette séparation. Le scénario consultable dans le portail reste une prévisualisation individuelle.
 

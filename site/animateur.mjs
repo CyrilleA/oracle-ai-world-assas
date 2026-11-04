@@ -3,8 +3,15 @@ let base='',key='',code='',snapshot='',pollTimer=null,busy=false;
 const $=s=>document.querySelector(s),error=s=>{$('#host-error').textContent=s;};
 const params=new URLSearchParams(location.hash.slice(1));
 if(validRoom(params.get('r')||''))save('assas-active-session',params.get('r'));
-if(params.get('key')){try{sessionStorage.setItem('assas-host-key',params.get('key'));}catch{}history.replaceState(null,'',location.pathname);}
-try{key=sessionStorage.getItem('assas-host-key')||'';}catch{}
+// L’ancienne clé n’est plus utilisée ni envoyée au serveur.
+if(params.get('key'))history.replaceState(null,'',location.pathname);
+try{sessionStorage.removeItem('assas-host-key');key=sessionStorage.getItem('assas-host-session')||'';}catch{}
+if(!key)key=load('assas-host-session')||'';
+function forgetSession(){try{sessionStorage.removeItem('assas-host-session');localStorage.removeItem('assas-host-session');}catch{}key='';}
+function rememberSession(token,persistent){
+ forgetSession();key=token;
+ try{(persistent?localStorage:sessionStorage).setItem('assas-host-session',token);}catch{}
+}
 function bars(result,options){return result.received===0?'<p class="status">Aucune réponse à cette question. Aucun pourcentage à interpréter.</p>':result.counts.map((n,i)=>{const pct=Math.round(n/result.received*100);return `<div class="bar-row"><div class="bar-label"><span>${esc(options[i])}</span><strong>${n} · ${pct} %</strong></div><div class="bar" role="img" aria-label="${esc(options[i])} : ${n} réponses, ${pct} pour cent"><span style="width:${pct}%"></span></div></div>`;}).join('');}
 function show(r){
  const revealed=['results','finished'].includes(r.phase),finished=r.phase==='finished';
@@ -15,14 +22,30 @@ function show(r){
  $('#dashboard').querySelector('[data-command]')?.addEventListener('click',e=>control(e.currentTarget.dataset.command));
 }
 async function refresh(){if(!code||busy)return;try{const r=await api(base,`/api/sessions/${code}/results`,{token:key});const next=JSON.stringify(r);if(next!==snapshot){snapshot=next;show(r);}$('#network').textContent='Connecté · Séance '+code;error('');}catch(e){$('#network').textContent='Connexion à rétablir';error(e.message);}}
+async function openConsole(){
+ await api(base,'/api/admin',{token:key});
+ $('#login').hidden=true;$('#host').hidden=false;$('#logout').hidden=false;
+ $('#password').value='';$('#login-error').textContent='';
+ code=load('assas-active-session')||'';if(!validRoom(code))code='';
+ if(code)await refresh();clearInterval(pollTimer);pollTimer=setInterval(refresh,5000);
+}
 async function login(){
- try{base=await configuration();await api(base,'/api/admin',{token:key});try{sessionStorage.setItem('assas-host-key',key);}catch{}$('#login').hidden=true;$('#host').hidden=false;$('#logout').hidden=false;code=load('assas-active-session')||'';if(!validRoom(code))code='';if(code)await refresh();clearInterval(pollTimer);pollTimer=setInterval(refresh,5000);}
- catch(e){$('#login-error').textContent=e.message;$('#login').hidden=false;$('#host').hidden=true;}
+ if(busy)return;busy=true;$('#connect').disabled=true;$('#login-error').textContent='Connexion…';
+ try{
+  base=base||await configuration();
+  const session=await api(base,'/api/login',{body:{password:$('#password').value,remember:$('#remember').checked}});
+  rememberSession(session.token,$('#remember').checked);await openConsole();
+ }catch(e){$('#login-error').textContent=e.message;}
+ finally{busy=false;$('#connect').disabled=false;}
+}
+async function restoreSession(){
+ try{base=await configuration();await openConsole();}
+ catch(e){if(e.status===401)forgetSession();$('#login-error').textContent=e.status===401?'Votre connexion a expiré. Saisissez votre mot de passe.':e.message;$('#login').hidden=false;$('#host').hidden=true;}
 }
 async function control(command){if(busy)return;busy=true;$('#dashboard').querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await api(base,`/api/sessions/${code}/control`,{token:key,body:{command}});snapshot=JSON.stringify(r);show(r);error('');}catch(e){error(e.message);}finally{busy=false;$('#dashboard').querySelectorAll('button').forEach(b=>b.disabled=false);}}
-$('#login form').addEventListener('submit',e=>{e.preventDefault();key=$('#key').value.trim();login();});
+$('#login form').addEventListener('submit',e=>{e.preventDefault();login();});
 $('#create').addEventListener('click',async()=>{if(busy)return;busy=true;$('#create').disabled=true;try{const r=await api(base,'/api/sessions',{token:key,body:{}});code=r.code;snapshot='';save('assas-active-session',code);await refreshAfterCreate();}catch(e){error(e.message);}finally{busy=false;$('#create').disabled=false;}});
 async function refreshAfterCreate(){const r=await api(base,`/api/sessions/${code}/results`,{token:key});snapshot=JSON.stringify(r);show(r);}
 $('#projection').addEventListener('click',()=>{const active=document.body.classList.toggle('projection');$('#projection').textContent=active?'Quitter la projection':'Projection';});
-$('#logout').addEventListener('click',()=>{clearInterval(pollTimer);try{sessionStorage.removeItem('assas-host-key');}catch{}key='';$('#key').value='';$('#host').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;$('#dashboard').innerHTML='';});
-if(key)login();
+$('#logout').addEventListener('click',()=>{clearInterval(pollTimer);forgetSession();$('#password').value='';$('#host').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;$('#dashboard').innerHTML='';});
+if(key)restoreSession();

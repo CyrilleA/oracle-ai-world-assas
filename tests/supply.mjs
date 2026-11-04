@@ -42,7 +42,7 @@ try{
  await call(path+'/assist',{token:A,body:{to:'buying',text:'Rédiger notre réponse'},status:409});assert.equal(aiCalls,0);
  await host({command:'event',event:'shortB'});await host({command:'ai',enabled:true,limit:1});
  const before=(await call(path+'/results',{token:admin})).messages.length;
- const draft=await call(path+'/assist',{token:A,body:{to:'buying',text:'Demander si une livraison partielle serait utile.'}});assert.ok(draft.text);assert.equal(aiCalls,1);assert.equal(captured.store,false);assert.equal(captured.model,'gpt-5-mini');
+ const draft=await call(path+'/assist',{token:A,body:{to:'buying',text:'Demander si une livraison partielle serait utile.'}});assert.ok(draft.text);assert.equal(aiCalls,1);assert.equal(captured.store,false);assert.equal(captured.model,'gpt-5-nano');
  const input=JSON.parse(captured.input);assert.equal(input.role.id,'supplierA');assert.equal(input.messages.some(m=>m.from==='supplierB'),false);assert.equal(input.events.length,0);assert.equal(JSON.stringify(input).includes('P16'),false);assert.equal(input.resources,undefined);
  const after=await call(path+'/results',{token:admin});assert.equal(after.messages.length,before,'Un brouillon IA ne crée ni message ni engagement');assert.equal(after.aiUsed.supplierA,1);
  await call(path+'/assist',{token:A,body:{to:'buying',text:'Une autre aide'},status:429});

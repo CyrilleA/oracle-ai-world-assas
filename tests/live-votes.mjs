@@ -9,12 +9,21 @@ const password='TEST-only-12345';
 assert.equal(password.length,15);
 let key='';
 const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:path.join(root,'.wrangler/build/worker.js'),compatibilityDate:'2026-10-01',
+ serviceBindings:{ASSETS:async request=>{
+  const p=new URL(request.url).pathname;
+  return new Response(p==='/index.html'?'Présentation':p==='/animateur.html'?'Console animateur':'Fichier absent',{status:['/index.html','/animateur.html'].includes(p)?200:404});
+ }},
  durableObjects:{ROOMS:{className:'QuizRoom',useSQLite:true},LOGIN_LIMITS:{className:'LoginLimit',useSQLite:true}},bindings:{ADMIN_PASSWORD:password,SESSION_KEY:'test-signing-secret-32-characters-long',ALLOWED_ORIGINS:'https://cyrillea.github.io'}}));
 async function call(url,{token='',body,status=200,origin='https://cyrillea.github.io',method,ip='192.0.2.10'}={}){
  const r=await mf.dispatchFetch('https://quiz.test'+url,{method:method||(body?'POST':'GET'),headers:{Origin:origin,'CF-Connecting-IP':ip,...(token?{Authorization:'Bearer '+token}:{}),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
  assert.equal(r.status,status,`${url} doit retourner ${status}`);return r.json();
 }
 try{
+ const presentation=await mf.dispatchFetch('https://quiz.test/');
+ assert.equal(presentation.status,200,'Le retour Présentation vers / doit ouvrir l’accueil');
+ assert.equal(await presentation.text(),'Présentation');
+ const consolePage=await mf.dispatchFetch('https://quiz.test/animateur.html');
+ assert.equal(consolePage.status,200,'L’accès animateur doit rester disponible');
  const session=await call('/api/login',{body:{password,remember:false}});key=session.token;
  assert.ok(session.expires>Date.now()+11*60*60*1000);
  const remembered=await call('/api/login',{body:{password,remember:true}});

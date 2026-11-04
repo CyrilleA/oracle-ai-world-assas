@@ -16,7 +16,12 @@ const bearer = r => r.headers.get('Authorization')?.replace(/^Bearer /,'') || ''
 export default {
   async fetch(request, env) {
     const u=new URL(request.url);
-    if(!u.pathname.startsWith('/api/'))return env.ASSETS?env.ASSETS.fetch(request):json({error:'Adresse inconnue.'},404);
+    if(!u.pathname.startsWith('/api/')){
+      if(!env.ASSETS)return json({error:'Adresse inconnue.'},404);
+      // With html_handling:none, the asset service does not map / to index.html.
+      if(u.pathname==='/'){u.pathname='/index.html';return env.ASSETS.fetch(new Request(u,request));}
+      return env.ASSETS.fetch(request);
+    }
     const origin=request.headers.get('Origin');
     const allowed=[...(env.ALLOWED_ORIGINS||'https://cyrillea.github.io').split(','),u.origin];
     const cors={ 'Access-Control-Allow-Methods':'GET,POST,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type,Authorization', 'Vary':'Origin' };

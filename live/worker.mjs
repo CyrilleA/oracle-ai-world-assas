@@ -15,14 +15,15 @@ const bearer = r => r.headers.get('Authorization')?.replace(/^Bearer /,'') || ''
 
 export default {
   async fetch(request, env) {
+    const u=new URL(request.url);
+    if(!u.pathname.startsWith('/api/'))return env.ASSETS?env.ASSETS.fetch(request):json({error:'Adresse inconnue.'},404);
     const origin=request.headers.get('Origin');
-    const allowed=(env.ALLOWED_ORIGINS||'https://cyrillea.github.io').split(',');
+    const allowed=[...(env.ALLOWED_ORIGINS||'https://cyrillea.github.io').split(','),u.origin];
     const cors={ 'Access-Control-Allow-Methods':'GET,POST,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type,Authorization', 'Vary':'Origin' };
     if (origin && allowed.includes(origin)) cors['Access-Control-Allow-Origin']=origin;
     const wrap = r => { const h=new Headers(r.headers); for(const [k,v] of Object.entries(cors)) h.set(k,v); h.set('X-Content-Type-Options','nosniff');return new Response(r.body,{status:r.status,headers:h}); };
     if(origin && !allowed.includes(origin)) return wrap(json({error:'Origine non autorisée.'},403));
     if(request.method==='OPTIONS') return wrap(new Response(null,{status:204}));
-    const u=new URL(request.url);
     if (u.pathname==='/api/health' && request.method==='GET') return wrap(json({ok:true}));
     try {
       if(u.pathname==='/api/login' && request.method==='POST') {

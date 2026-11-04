@@ -4,6 +4,7 @@
   "main": "live/worker.mjs",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
+  "assets": {"directory":"site","binding":"ASSETS","run_worker_first":true,"html_handling":"none"},
   "vars": {"ALLOWED_ORIGINS":"https://cyrillea.github.io"},
   "durable_objects": {"bindings":[{"name":"ROOMS","class_name":"QuizRoom"},{"name":"LOGIN_LIMITS","class_name":"LoginLimit"}]},
   "migrations": [{"tag":"v1","new_sqlite_classes":["QuizRoom"]},{"tag":"v2","new_sqlite_classes":["LoginLimit"]}],

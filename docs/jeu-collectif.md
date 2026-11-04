@@ -44,7 +44,7 @@ npm run deploy:live
 
 Le navigateur ne conserve jamais le mot de passe. Il reçoit un jeton signé valable 12 heures, ou sept jours si l’animateur choisit de rester connecté. Sans mémorisation, le jeton reste dans la session de l’onglet. Un changement du mot de passe invalide tous les jetons précédents. Les essais incorrects sont limités à cinq par adresse réseau sur dix minutes. Les anciens fichiers de clé et liens contenant `#key=` ne permettent plus de se connecter. Après déploiement, renseigner l’origine HTTPS retournée dans `site/live-config.json`, sous la clé `api`, puis publier les fichiers statiques sur GitHub Pages.
 
-Le worker autorise l’origine `https://cyrillea.github.io`. Le backend ne sert pas les fichiers du portail. Les séances sont isolées par un code aléatoire et expirent indépendamment.
+Le worker autorise l’origine `https://cyrillea.github.io`. Le backend sert aussi une copie du portail via le binding de fichiers statiques `ASSETS`. Son origine HTTPS est autorisée pour les appels depuis cette copie, en plus de l’origine GitHub Pages. Les séances sont isolées par un code aléatoire et expirent indépendamment.
 
 ## Vérification
 

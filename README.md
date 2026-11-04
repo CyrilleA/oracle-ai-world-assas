@@ -4,7 +4,11 @@ Portail pédagogique pour animer la matinée du 5 novembre 2026. Il présente un
 
 ## Accéder au portail
 
-Le site se publie gratuitement avec GitHub Pages. L’adresse effective apparaît dans **Settings → Pages** et dans le résultat du workflow **Publier le portail**.
+**Site : https://cyrillea.github.io/oracle-ai-world-assas/**
+
+Hébergement gratuit avec GitHub Pages. Les étudiants scannent le QR code ci-dessous et ouvrent le portail avec leur connexion Internet, sans compte GitHub.
+
+![QR code du portail](site/qr-code-site.png)
 
 Le fichier `site/index.html` fonctionne aussi directement dans un navigateur. Son contenu, ses schémas et ses calculs sont embarqués. Les vidéos et les sources externes demandent une connexion Internet.
 

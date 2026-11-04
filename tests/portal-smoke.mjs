@@ -21,6 +21,21 @@ const context=vm.createContext({document,window:{scrollTo(){},addEventListener()
 vm.runInContext(code,context);
 const run=s=>vm.runInContext(s,context);
 const check=(s,message)=>assert.ok(run(s),message);
+run("navigate('accueil');action('party-reset')");
+assert.ok(nodes.get('#main').innerHTML.includes('la soirée Beaujolais'));
+run("action('party-start')");
+for(let step=1;step<=3;step++){
+ check(`state.partyStep===${step}`,'Progression du défi Beaujolais');
+ assert.ok(!nodes.get('#main').innerHTML.includes('class="party-debrief"'),'Discussion masquée avant révélation');
+ run("action('party-debrief')");
+ assert.ok(nodes.get('#main').innerHTML.includes(run('PARTY[state.partyStep-1].debrief')));
+ run("action('party-next')");
+}
+assert.ok(nodes.get('#main').innerHTML.includes('Vous venez de définir une Agentic Enterprise.'));
+run("action('party-prev')");
+assert.ok(nodes.get('#main').innerHTML.includes('Nouveau total : 960 €'));
+run("action('party-reset')");
+check('state.partyStep===0&&Object.keys(state.partyVotes).length===0&&Object.keys(state.partyDebriefs).length===0','Remise à zéro du défi');
 for(const route of ['accueil','frise','enterprise','ai-world','scm','deleguer','demos','atelier','parcours']){
  run(`navigate('${route}')`);
  assert.ok(nodes.get('#main').innerHTML.length>100,route+' doit contenir du contenu');

@@ -13,3 +13,8 @@
 .projection .host-story{grid-template-columns:minmax(260px,.8fr) minmax(0,1.8fr);gap:36px}
 .projection .host-story .context{font-size:clamp(27px,2.4vw,34px)}
 @media(max-width:600px){.host-story,.projection .host-story{grid-template-columns:1fr;gap:20px}.host-story img{max-width:340px;margin:auto}.host-story .context,.projection .host-story .context{font-size:23px}.host-main .stats{gap:10px 20px}.host-main .stats strong{font-size:20px}.host-main .stats small{font-size:12px}}
+.host-main{padding-top:22px}
+.host-main>#host>.actions{margin:0 0 12px;min-height:32px;justify-content:flex-end}
+.host-main #create{padding:8px 12px;font-size:12px;background:transparent;color:var(--muted);border:1px solid var(--line)}
+.host-grid h1{margin:12px 0 18px}
+.host-main .status{font-size:14px;padding:10px 14px;margin-top:16px}

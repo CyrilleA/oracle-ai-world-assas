@@ -176,3 +176,14 @@ Cliquer « Démarrer le test », puis choisir l’équipe qui doit répondre dan
 Le volet « Commandes animateur » permet d’injecter des événements, de modifier les contraintes et les objectifs, de fixer l’heure de fin et de consulter le bilan. « Rejouer le test avec IA » prépare les propositions avec le modèle et les quotas habituels ; l’animateur les valide en changeant de rôle. Les appels API consomment le crédit OpenAI uniquement en phase IA. « Nouvelle partie test » crée une nouvelle séance privée et conserve les anciens bilans accessibles par leur adresse jusqu’à l’expiration.
 
 Les six rôles sont contrôlés par des routes serveur réservées à une session animateur valide. Aucun jeton joueur ni mot de passe n’est placé dans l’URL. Les accès élèves et le QR code ne donnent pas accès au profil ; l’inscription publique et la lecture publique de la partie test sont bloquées. Le profil ne permet pas de prendre le contrôle des rôles d’une partie normale.
+
+
+## Fabrication supplémentaire et heure choisie
+
+L’offre reprend désormais la quantité demandée sans la réduire automatiquement au plafond de stock et fabrication. La vérification affiche les pièces prises sur le stock, les pièces à fabriquer, le créneau de fabrication, le transport, la première heure de livraison et le maximum physiquement livrable à l’heure sélectionnée. Les heures de livraison et les alternatives peuvent aller jusqu’à 23 h 59 sur la journée du scénario.
+
+Dans le profil test, pendant la préparation d’une réponse fournisseur, « Mode test : fabriquer davantage » permet à l’animateur d’ajuster en une opération le début de fabrication, les matières disponibles et la fabrication totale autorisée. Le début proposé reprend l’heure réelle de Paris, que l’on peut modifier pour le scénario. La cadence et le transport sont conservés. Ce réglage n’est pas accessible aux élèves et ne modifie pas une partie normale. Les contraintes existantes des parties ne sont pas élargies automatiquement.
+
+Exemple : début 20 h, stock libre 20, cadence 40/h, matières et capacité suffisantes. Une offre de 80 nécessite 60 fabrications, soit 90 min : fin de fabrication 21 h 30, puis 60 min de transport, livraison des composants à 22 h 30. À 22 h, seulement 60 sont livrables. Le site propose la quantité partielle à l’heure demandée ou la quantité complète à une heure plus tardive. La préparation des coffrets et leur transport final sont des étapes supplémentaires. Plus de temps ne supprime pas les limites de matières, de capacité ou de budget ; la cible de livraison doit être renégociée si nécessaire.
+
+Le créneau supplémentaire s’applique aux nouvelles offres, sans déplacer la fabrication des engagements déjà confirmés. Une révision d’offre tient compte de la libération de l’ancien engagement au moment de son acceptation.

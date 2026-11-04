@@ -1,4 +1,4 @@
-import {supplierCapacity,supplierDelivery,transportOption,accepted} from './supply-game.mjs';
+import {supplierCapacity,supplierDelivery,transportOption,accepted,nextSupplierDelivery} from './supply-game.mjs';
 import {economics,supplierCost} from './supply-finance.mjs';
 export function quickPlan(g){
  const begin=performance.now(),e=economics(g),q=g.demand,r=g.resources.ops,solutions=[],orders=accepted(g),op=orders.find(x=>x.from==='ops'),source=orders.find(x=>x.from==='buying');
@@ -12,7 +12,7 @@ export function quickPlan(g){
   if(a>supplierCapacity(g.resources.supplierA)||b>supplierCapacity(g.resources.supplierB)||q>r.capacity||q>(r.packagingStock??Infinity))continue;
   const price=(role,n)=>{const old=committed[role],extra=n-old.quantity;return extra?Math.max(g.resources[role].minPrice,Math.ceil((supplierCost(g,role,n)/(1-e.targets[role]/100)-old.cost)/extra)):0;};
   const priceA=price('supplierA',a),priceB=price('supplierB',b),purchases=committed.supplierA.cost+(a-committed.supplierA.quantity)*priceA+committed.supplierB.cost+(b-committed.supplierB.quantity)*priceB;
-  const ready=Math.max(source?.delivery||0,committed.supplierA.delivery,committed.supplierB.delivery,a?supplierDelivery(g.resources.supplierA,a):0,b?supplierDelivery(g.resources.supplierB,b):0);
+  const ready=Math.max(source?.delivery||0,committed.supplierA.delivery,committed.supplierB.delivery,a>committed.supplierA.quantity?nextSupplierDelivery(g,'supplierA',a-committed.supplierA.quantity):0,b>committed.supplierB.quantity?nextSupplierDelivery(g,'supplierB',b-committed.supplierB.quantity):0);
   for(const mode of ['normal','express']){
    const t=transportOption(g,mode);if(q>t.capacity||op&&(op.transport!==mode||op.quantity<q))continue;
    const prepPrice=op?.unitPrice??Math.max(r.minPrice,Math.ceil((q*e.ops.preparationUnitCost+(e.targets.ops/100)*t.cost)/(1-e.targets.ops/100)/q));

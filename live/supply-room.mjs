@@ -93,6 +93,13 @@ export class SupplyRoom extends DurableObject {
     }
     else if(c==='event'&&['running','paused'].includes(g.phase)){if(g.events.length>=40)deny('Limite de contraintes atteinte.',409);applyEvent(g,b.event,b.text,b.target);}
     else if(c==='limit'&&['waiting','running','paused'].includes(g.phase)){if(g.events.length>=100)deny('Limite de changements atteinte.',409);applyLimit(g,b);}
+    else if(c==='production-window'&&g.testMode&&['waiting','running','paused'].includes(g.phase)){
+     if(!['supplierA','supplierB'].includes(b.role)||![b.start,b.materials,b.production].every(Number.isInteger)||b.start<0||b.start>1439||b.materials<0||b.materials>120||b.production<0||b.production>120)deny('Vérifiez le fournisseur, l’heure et les moyens (0 à 120 pièces).');
+     const r=g.resources[b.role];if(b.start+r.transit>1439)deny('Le transport dépasserait la fin de journée. Choisissez un début plus tôt.');
+     Object.assign(r,{rawStock:b.materials,productionCapacity:b.production,capacity:Math.min(120,r.stock+Math.min(b.materials,b.production))});g.productionWindows||={};g.productionWindows[b.role]={start:b.start};
+     const text=`Atelier test ajusté : début ${String(Math.floor(b.start/60)).padStart(2,'0')}:${String(b.start%60).padStart(2,'0')}, ${b.materials} matières et ${b.production} pièces fabricables au maximum.`;
+     g.events.push({id:crypto.randomUUID(),target:b.role,text,at:Date.now(),round:g.round});log(g,'animateur',text);
+    }
     else if(c==='economics'&&g.workflow===2&&g.phase!=='finished'){changeEconomics(g,b);const roleName=ROLES.find(r=>r.id===b.role)?.name;log(g,'animateur',`Objectif économique ${roleName} : ${b.target} % · hypothèses mises à jour`);g.events.push({id:crypto.randomUUID(),target:b.role,at:Date.now(),round:g.round,text:`Votre objectif économique est maintenant de ${b.target} %. Vos hypothèses de coût sont actualisées.`});}
     else if(c==='captain'){
      const candidate=Object.values(g.players).find(p=>p.id===b.playerId&&p.role===b.role);if(!candidate)deny('Participant inconnu dans cette équipe.');

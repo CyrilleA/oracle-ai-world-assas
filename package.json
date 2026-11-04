@@ -6,7 +6,7 @@
   "description": "Portail pédagogique Oracle AI World, SCM et Agentic Enterprise pour ASSAS",
   "scripts": {
     "test": "node tests/portal-smoke.mjs",
-    "test:live": "node tests/auth.mjs && wrangler deploy --dry-run --outdir .wrangler/build && node tests/live-votes.mjs && node tests/supply.mjs && node tests/supply-workflow.mjs && node tests/supply-guidance.mjs && node tests/supply-constraints.mjs && node tests/supply-experiment.mjs && node tests/supply-finance.mjs && node tests/supply-timing.mjs && node tests/supply-test-profile.mjs",
+    "test:live": "node tests/auth.mjs && wrangler deploy --dry-run --outdir .wrangler/build && node tests/live-votes.mjs && node tests/supply.mjs && node tests/supply-workflow.mjs && node tests/supply-guidance.mjs && node tests/supply-constraints.mjs && node tests/supply-experiment.mjs && node tests/supply-finance.mjs && node tests/supply-timing.mjs && node tests/supply-test-profile.mjs && node tests/supply-production.mjs",
     "deploy:live": "wrangler deploy"
   },
   "engines": {

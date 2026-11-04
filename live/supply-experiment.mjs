@@ -1,17 +1,17 @@
 import {economics,finance,financeView,financePreview,FINANCE_ROLES} from './supply-finance.mjs';
-import {initialGame,view,act,assess,captain} from './supply-game.mjs';
+import {initialGame,view,act,assess,captain,supplierDelivery,accepted,nextSupplierDelivery} from './supply-game.mjs';
 import {nextTask,proposalExplanation as safeExplanation} from '../site/supply-tasks.mjs';
 export const stage=g=>g.experiment?.stage||'human';
 export function startExperiment(g){
  if(g.workflow!==2)return;
- g.experiment||={stage:'human',startedAt:Date.now(),reports:[],baseline:structuredClone({resources:g.resources,demand:g.demand,budget:g.budget,promise:g.promise,economics:economics(g)})};
+ g.experiment||={stage:'human',startedAt:Date.now(),reports:[],baseline:structuredClone({resources:g.resources,demand:g.demand,budget:g.budget,promise:g.promise,economics:economics(g),productionWindows:g.productionWindows||{}})};
 }
 export function report(g){const e=g.experiment,a=assess(g),orders=g.documents.filter(d=>d.acceptedAt),jobs=(e?.history||[]);return {stage:stage(g),startedAt:e?.startedAt||g.created,endedAt:e?.endedAt||Date.now(),elapsedMs:Math.max(0,(e?.endedAt||Date.now())-(e?.startedAt||g.created)),firstPromiseMs:orders.some(d=>d.to==='client')?Math.min(...orders.filter(d=>d.to==='client').map(d=>d.acceptedAt))-(e?.startedAt||g.created):null,assessment:a,finances:Object.fromEntries(FINANCE_ROLES.map(r=>[r,finance(g,r)])),documents:g.documents.length,accepted:orders.length,aiPrepared:jobs.filter(j=>j.readyAt).length,aiPreparationMs:jobs.filter(j=>j.readyAt).map(j=>j.readyAt-j.startedAt),responses:g.documents.filter(d=>d.type==='offer').map(d=>({role:d.from,ms:d.at-(g.documents.find(r=>r.id===d.requestId)?.at||d.at)}))};}
 export function replayWithAI(g){
  if(g.workflow!==2||stage(g)!=='human'||!g.experiment)throw Error('Démarrez d’abord la phase humaine.');
  const e=g.experiment,r=report(g);e.reports.push(r);e.archive={documents:g.documents,messages:g.messages,events:g.events,log:g.log,plan:g.plan,financeHistory:g.financeHistory||[]};
  const fresh=initialGame(g.code);for(const k of ['documents','messages','proposals','events','log','plan','aiUsed','aiTickets','drafts','financeHistory'])g[k]=fresh[k]??[];
- Object.assign(g,structuredClone(e.baseline));g.economics=structuredClone(e.baseline.economics||economics(initialGame(g.code)));g.round=1;g.phase='running';g.finishedReason=null;g.aiEnabled=true;g.aiLimit=6;
+ Object.assign(g,structuredClone(e.baseline));g.economics=structuredClone(e.baseline.economics||economics(initialGame(g.code)));g.productionWindows=structuredClone(e.baseline.productionWindows||{});g.round=1;g.phase='running';g.finishedReason=null;g.aiEnabled=true;g.aiLimit=6;
  g.experiment={...e,stage:'ai',startedAt:Date.now(),endedAt:null,jobs:{},history:[]};
 }
 export function publicExperiment(g,p,admin=false){
@@ -41,8 +41,8 @@ export function candidates(g,p,context=taskContext(g,p)){
  for(const quantity of quantities)for(const transport of p.role==='ops'?['normal','express']:['normal']){
   const trial={...base,quantity,transport,delivery};
   if(p.role==='planning'&&action==='quote')trial.transport=s.documents.find(d=>d.from==='ops'&&d.status==='accepted')?.transport||'normal';
-  for(const hour of action==='request'?[delivery]:[delivery,...Array.from({length:19},(_,i)=>780+i*30)]){
-   const original={...trial,delivery:hour};if(hour<780||hour>1320)continue;
+  for(const hour of action==='request'?[delivery]:[delivery,...(['supplierA','supplierB'].includes(p.role)?[nextSupplierDelivery(g,p.role,quantity,base.replacesId)]:[]),...Array.from({length:22},(_,i)=>780+i*30),1439]){
+   const original={...trial,delivery:hour};if(hour<780||hour>1439)continue;
    let targetPrice=original.unitPrice;
    if(action==='quote'&&['supplierA','supplierB','ops'].includes(p.role)){
     const probe=financePreview(g,p,original),rate=(s.finance?.target||0)/100;

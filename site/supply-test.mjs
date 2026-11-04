@@ -1,5 +1,5 @@
 import {esc,configuration,api,load,validRoom} from './live-common.mjs';
-import {renderWorkflow} from './supply-workflow.mjs?v=action-prioritaire-20261104';
+import {renderWorkflow} from './supply-workflow.mjs?v=production-20261104';
 import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=profil-test-20261104';
 import {tickCountdown} from './supply-timing.mjs';
 const $=s=>document.querySelector(s),root=$('#test-player');
@@ -15,7 +15,7 @@ function controls(){
  $('#test-roles').innerHTML=(admin?.roles||[]).map(r=>{const t=tasks.find(x=>x.role===r.id),job=admin?.experiment?.jobs?.[r.id],label=t?.kind==='wait'?(t.complete?'Étape terminée':'En attente'):admin?.experiment?.stage==='ai'&&job?.status==='pending'?'L’IA prépare':admin?.experiment?.stage==='ai'&&job?.status==='ready'?'À valider':'Doit agir';return `<button class="test-role ${r.id===role?'selected':''}" data-role="${r.id}" aria-pressed="${r.id===role}" ${busy?'disabled':''}><strong>${esc(r.name)}</strong><span class="${t?.kind!=='wait'?'test-actionable':''}">${esc(label)}</span><small>${esc(t?.title||'')}</small></button>`;}).join('');
  $('#test-roles').querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>choose(b.dataset.role));
 }
-function player(){renderWorkflow(root,state,{send,check:payload=>api(base,path()+'/test-act',{token:key,body:{role,action:'check',payload}})});tickCountdown(root);}
+function player(){renderWorkflow(root,state,{send,productionWindow:payload=>control({command:'production-window',...payload}),check:payload=>api(base,path()+'/test-act',{token:key,body:{role,action:'check',payload}})});tickCountdown(root);}
 async function refresh(force=false){if(!code||busy||!key)return;try{
  const selected=role,[nextAdmin,nextState]=await Promise.all([api(base,path()+'/results',{token:key}),api(base,path()+'/test-state',{token:key,body:{role:selected}})]);
  if(selected!==role||busy)return;

@@ -21,8 +21,8 @@ export const EVENTS=[
  {id:'demand',label:'Client : 10 coffrets supplémentaires',target:'client'}
 ];
 export const LIMITS={
- all:[{id:'budget',label:'Budget maximal',kind:'money',min:0,max:10000000},{id:'demand',label:'Quantité demandée par le client',min:1,max:120},{id:'deadline',label:'Heure promise au client',kind:'time',min:780,max:1320}],
- supplier:[{id:'stock',label:'Stock prêt à livrer',min:0,max:120},{id:'rawStock',label:'Matières premières disponibles',min:0,max:120},{id:'productionCapacity',label:'Capacité maximale de fabrication',min:0,max:120},{id:'productionRate',label:'Cadence de fabrication (unités / h)',min:1,max:240},{id:'productionStart',label:'Début de fabrication',kind:'time',min:0,max:1320},{id:'capacity',label:'Quantité totale maximale',min:0,max:120},{id:'transit',label:'Transport fournisseur (minutes)',min:0,max:360},{id:'earliest',label:'Première livraison possible',kind:'time',min:780,max:1320},{id:'minPrice',label:'Prix plancher par composant',kind:'money',min:0,max:10000}],
+ all:[{id:'budget',label:'Budget maximal',kind:'money',min:0,max:10000000},{id:'demand',label:'Quantité demandée par le client',min:1,max:120},{id:'deadline',label:'Heure promise au client',kind:'time',min:780,max:1439}],
+ supplier:[{id:'stock',label:'Stock prêt à livrer',min:0,max:120},{id:'rawStock',label:'Matières premières disponibles',min:0,max:120},{id:'productionCapacity',label:'Capacité maximale de fabrication',min:0,max:120},{id:'productionRate',label:'Cadence de fabrication (unités / h)',min:1,max:240},{id:'productionStart',label:'Début de fabrication',kind:'time',min:0,max:1439},{id:'capacity',label:'Quantité totale maximale',min:0,max:120},{id:'transit',label:'Transport fournisseur (minutes)',min:0,max:360},{id:'earliest',label:'Première livraison possible',kind:'time',min:780,max:1439},{id:'minPrice',label:'Prix plancher par composant',kind:'money',min:0,max:10000}],
  ops:[{id:'normalCapacity',label:'Capacité de transport normal (coffrets)',min:0,max:120},{id:'expressCapacity',label:'Capacité de transport express (coffrets)',min:0,max:120},{id:'normalCost',label:'Coût du transport normal',kind:'money',min:0,max:1000000},{id:'expressCost',label:'Coût du transport express',kind:'money',min:0,max:1000000},{id:'expressTravel',label:'Durée du transport express (minutes)',min:0,max:360},{id:'packagingStock',label:'Stock d’emballages',min:0,max:240},{id:'capacity',label:'Capacité maximale de préparation',min:0,max:120},{id:'rate',label:'Cadence de préparation (coffrets / h)',min:1,max:240},{id:'travel',label:'Durée du transport normal (minutes)',min:0,max:360},{id:'quarantine',label:'Composants bloqués par la qualité',min:0,max:120},{id:'minPrice',label:'Prix plancher de préparation',kind:'money',min:0,max:10000}]
 };
 export function limitValue(g,target,field){if(target==='ops'&&g.workflow===2&&g.resources.ops[field]===undefined){const normal=transportOption(g,'normal'),express=transportOption(g,'express');const values={normalCapacity:normal.capacity,expressCapacity:express.capacity,normalCost:normal.cost,expressCost:express.cost,expressTravel:express.duration};if(field in values)return values[field];}return target==='all'?(field==='deadline'?g.promise.delivery:g[field]):g.resources[target]?.[field];}
@@ -50,6 +50,20 @@ export function supplierCapacity(r){return r.stock===undefined?r.capacity:Math.m
 export function supplierDelivery(r,quantity){
  if(r.stock===undefined||quantity<=r.stock)return r.earliest;
  return Math.max(r.earliest,r.productionStart+Math.ceil((quantity-r.stock)/r.productionRate*60)+r.transit);
+}
+export function supplierProduction(r,earlier,m){
+ let booked=0,finish=r.productionStart;
+ for(const d of [...earlier].sort((a,b)=>(a.acceptedAt||a.at||0)-(b.acceptedAt||b.at||0)||String(a.orderRef).localeCompare(String(b.orderRef)))){
+  const made=Math.max(0,booked+d.quantity-r.stock)-Math.max(0,booked-r.stock),start=Math.max(finish,r.productionStart,d.productionStart??r.productionStart);
+  if(made)finish=start+Math.ceil(made/r.productionRate*60);booked+=d.quantity;
+ }
+ const stockUsed=Math.min(m.quantity,Math.max(0,r.stock-booked)),toManufacture=m.quantity-stockUsed,from=Math.max(finish,r.productionStart,m.productionStart??r.productionStart),duration=Math.ceil(toManufacture/r.productionRate*60),until=from+duration;
+ const dispatch=toManufacture?until:m.productionStart??(r.earliest-r.transit),earliestDelivery=Math.max(r.earliest,dispatch+r.transit);
+ return {stockUsed,toManufacture,from,until,duration,transportMinutes:r.transit,earliestDelivery};
+}
+export function nextSupplierDelivery(g,role,quantity,replacesId=''){
+ const earlier=accepted(g,role).filter(d=>d.id!==replacesId);
+ return supplierProduction(g.resources[role],earlier,{quantity,productionStart:g.productionWindows?.[role]?.start}).earliestDelivery;
 }
 export function supplierStatus(g,id){const r=g.resources[id],booked=accepted(g,id).reduce((n,o)=>n+o.quantity,0),stockBooked=Math.min(booked,r.stock||0);
  return {capacity:supplierCapacity(r),booked,remaining:Math.max(0,supplierCapacity(r)-booked),stockRemaining:r.stock===undefined?null:Math.max(0,r.stock-stockBooked),productionBooked:r.stock===undefined?null:Math.max(0,booked-r.stock),delivery:supplierDelivery(r,booked)};
@@ -81,13 +95,13 @@ export function assess(g,plan=g.plan){
  if(cost>g.budget)reasons.push('Le budget est dépassé.');
  if(arrival===null||arrival>g.promise.delivery)reasons.push('L’arrivée avant l’heure promise n’est pas assurée.');
  if(q<g.promise.quantity)reasons.push('La quantité promise au client n’est pas couverte.');
- if(g.workflow===2&&q){const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);if(!sourcing||sourcing.quantity<q)reasons.push('L’engagement Achats ne couvre pas le plan.');if(sourcing&&sourcing.delivery>Math.min(operation?.delivery||1320,g.promise.delivery))reasons.push('L’engagement Achats est trop tardif.');if(sourcing&&!workflowHealth(g,sourcing).ok)reasons.push('L’engagement Achats est à risque : faites-le réviser.');if(operation&&!workflowHealth(g,operation).ok)reasons.push('L’engagement Opérations est à risque : faites-le réviser.');if(operation&&operation.transport!==plan.transport)reasons.push('Le transport diffère de l’engagement Opérations.');if([sourcing,operation].filter(Boolean).some(d=>d.dependencyIds?.some(id=>!accepted(g).some(a=>a.id===id))))reasons.push('Un engagement amont a changé : faites reconfirmer les engagements dépendants.');}
+ if(g.workflow===2&&q){const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);if(!sourcing||sourcing.quantity<q)reasons.push('L’engagement Achats ne couvre pas le plan.');if(sourcing&&sourcing.delivery>Math.min(operation?.delivery||1439,g.promise.delivery))reasons.push('L’engagement Achats est trop tardif.');if(sourcing&&!workflowHealth(g,sourcing).ok)reasons.push('L’engagement Achats est à risque : faites-le réviser.');if(operation&&!workflowHealth(g,operation).ok)reasons.push('L’engagement Opérations est à risque : faites-le réviser.');if(operation&&operation.transport!==plan.transport)reasons.push('Le transport diffère de l’engagement Opérations.');if([sourcing,operation].filter(Boolean).some(d=>d.dependencyIds?.some(id=>!accepted(g).some(a=>a.id===id))))reasons.push('Un engagement amont a changé : faites reconfirmer les engagements dépendants.');}
  return {quantity:q,available,arrival,cost,budget:g.budget,valid:reasons.length===0,reasons,originalDemand:g.demand,promise:g.promise,coverage:Math.min(q,available)};
 }
 export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA'||role==='supplierB'){
  const s=supplierStatus(g,role);
  if(r.stock===undefined)return `Capacité totale : ${r.capacity} composants. Prix minimum : ${money(r.minPrice)} par composant. Livraison au plus tôt : ${clock(r.earliest)}. Offres acceptées : ${s.booked} composants. Ces limites sont confidentielles à votre équipe.`;
- return `Stock prêt à livrer, avant réservations : ${r.stock} composants ; encore non engagé : ${s.stockRemaining}. Matières premières : ${r.rawStock}, soit au plus ${Math.min(r.rawStock,r.productionCapacity)} composants à fabriquer. Capacité de fabrication : ${r.productionCapacity} composants ; cadence : ${r.productionRate}/h à partir de ${clock(r.productionStart)}. Transport : ${r.transit} min ; première livraison possible : ${clock(r.earliest)}. Pour un volume dépassant le stock, fabrication avant transport. Engagements : ${s.booked}, dont ${s.productionBooked} à fabriquer. Quantité supplémentaire possible : ${s.remaining}. Prix minimum : ${money(r.minPrice)} par composant. Ces limites sont confidentielles à votre équipe.`;
+ return `Stock prêt à livrer, avant réservations : ${r.stock} composants ; encore non engagé : ${s.stockRemaining}. Matières premières : ${r.rawStock}, soit au plus ${Math.min(r.rawStock,r.productionCapacity)} composants à fabriquer. Capacité de fabrication : ${r.productionCapacity} composants ; cadence : ${r.productionRate}/h à partir de ${clock(g.productionWindows?.[role]?.start??r.productionStart)}. Transport : ${r.transit} min ; première livraison possible : ${clock(r.earliest)}. Pour un volume dépassant le stock, fabrication avant transport. Engagements : ${s.booked}, dont ${s.productionBooked} à fabriquer. Quantité supplémentaire possible : ${s.remaining}. Prix minimum : ${money(r.minPrice)} par composant. Ces limites sont confidentielles à votre équipe.`;
  }
  if(role==='ops')return `Capacité : ${r.capacity} coffrets.${r.packagingStock===undefined?'':` Stock d’emballages : ${r.packagingStock} ; un emballage nécessaire par coffret.`} Cadence : ${r.rate} coffrets/heure après réception de tous les composants. Prix de préparation minimum : ${money(r.minPrice)} par coffret. Transport normal : ${transportOption(g,'normal').duration} min, ${money(transportOption(g,'normal').cost)}, au plus ${transportOption(g,'normal').capacity} coffrets. Express : ${transportOption(g,'express').duration} min, ${money(transportOption(g,'express').cost)}, au plus ${transportOption(g,'express').capacity} coffrets. Composants bloqués par la qualité : ${r.quarantine}. Communiquez les impacts aux autres équipes.`;
  if(role==='buying')return 'Un composant acheté permet de préparer un coffret. Consultez les deux fournisseurs sur le prix, le stock disponible et les délais des quantités à fabriquer. Un stock déjà engagé ne peut pas être vendu une seconde fois. Vous seul acceptez leurs offres. Les achats acceptés consomment le budget même si tous les composants ne sont pas utilisés.';
@@ -101,7 +115,7 @@ export function view(g,p,admin=false,ready=false){
  messages:g.messages.filter(m=>admin||m.from===role||m.to===role),proposals:g.proposals.filter(m=>admin||m.from===role),events:g.events.filter(e=>admin||e.target==='all'||e.target===role),
  ...(admin?{budgetDetails:budgetProjection(g),limitSchema:LIMITS,resources:{...g.resources,ops:g.workflow===2?operationResources(g):g.resources.ops},resourceBriefs:Object.fromEntries(['supplierA','supplierB','ops'].map(id=>[id,teamBrief(g,id)])),log:g.log,aiCounts:Object.fromEntries(ROLES.map(r=>[r.id,g.log.filter(e=>e.who===r.id&&e.kind==='ai').length])),aiDrafts:Object.entries(g.drafts).map(([player,d])=>({playerId:player,role:Object.values(g.players).find(p=>p.id===player)?.role||'',text:d.text,at:d.at}))}:{}),
  spending:role==='buying'?{available:Math.max(0,budgetProjection(g).remaining),overBudget:budgetProjection(g).remaining<0}:null,
- inventory:['supplierA','supplierB'].includes(role)&&g.resources[role].stock!==undefined?{...g.resources[role],...supplierStatus(g,role)}:role==='ops'&&g.resources.ops.packagingStock!==undefined?operationResources(g):null,
+ inventory:['supplierA','supplierB'].includes(role)&&g.resources[role].stock!==undefined?{...g.resources[role],...supplierStatus(g,role),productionWindow:g.productionWindows?.[role]||null}:role==='ops'&&g.resources.ops.packagingStock!==undefined?operationResources(g):null,
  draft:p?g.drafts[p.id]||null:null};
 }
 function fail(message,status=400){const e=Error(message);e.status=status;throw e;}
@@ -112,7 +126,7 @@ export function messageFields(g,p,b){
  const m={id:crypto.randomUUID(),from:p.role,to,type,text,at:Date.now(),round:g.round,status:'sent',quantity:null,unitPrice:null,delivery:null,ai:!!b.aiTicket&&g.aiTickets[b.aiTicket]?.player===p.id&&g.aiTickets[b.aiTicket]?.status==='ready'};
  if(type==='offer'){
   if(!((['supplierA','supplierB'].includes(p.role)&&to==='buying')||(p.role==='ops'&&to==='planning')||(p.role==='planning'&&to==='client')))fail('Les offres circulent des fournisseurs aux achats, des opérations à la planification, puis de la planification au client.');
-  if(!Number.isInteger(b.quantity)||b.quantity<1||b.quantity>120||!Number.isInteger(b.unitPrice)||b.unitPrice<0||b.unitPrice>10000||!Number.isInteger(b.delivery)||b.delivery<780||b.delivery>1320)fail('Vérifiez la quantité, le prix unitaire et l’heure de livraison (13 h à 22 h).');
+  if(!Number.isInteger(b.quantity)||b.quantity<1||b.quantity>120||!Number.isInteger(b.unitPrice)||b.unitPrice<0||b.unitPrice>10000||!Number.isInteger(b.delivery)||b.delivery<780||b.delivery>1439)fail('Vérifiez la quantité, le prix unitaire et l’heure de livraison (13 h à 23 h 59).');
   Object.assign(m,{quantity:b.quantity,unitPrice:b.unitPrice,delivery:b.delivery,status:'pending'});
   validateOffer(g,m);
  }
@@ -199,7 +213,7 @@ function workflowOfferReport(original,m,existing=false){
  const g=workflowBase(original,m),errors=[],warnings=[],q=m.quantity,r=g.resources[m.from];let available=0,earliest=null,cost=null;
  if(supplierRole(m.from)){
   const earlier=accepted(g,m.from).filter(d=>d.id!==m.id&&(!existing||((d.acceptedAt||d.at)<(m.acceptedAt||m.at)||((d.acceptedAt||d.at)===(m.acceptedAt||m.at)&&String(d.orderRef)<String(m.orderRef)))));
-  const booked=earlier.reduce((n,d)=>n+d.quantity,0);available=Math.max(0,supplierCapacity(r)-booked);earliest=q<=available?supplierDelivery(r,booked+q):null;
+  const booked=earlier.reduce((n,d)=>n+d.quantity,0);available=Math.max(0,supplierCapacity(r)-booked);earliest=q<=available?supplierProduction(r,earlier,m).earliestDelivery:null;
   if(q>available)errors.push('Le stock libre, les matières et la capacité de fabrication ne couvrent pas cette quantité.');
   if(earliest!==null&&m.delivery<earliest)errors.push('La fabrication et le transport ne permettent pas cette heure de livraison.');
   if(!existing&&m.unitPrice<r.minPrice)errors.push('Le prix proposé est inférieur au prix plancher de votre équipe.');
@@ -236,22 +250,29 @@ function workflowCandidate(g,p,b){
  if(replacesId){const old=g.documents.find(d=>d.id===replacesId&&d.type==='offer'&&d.status==='accepted'&&d.from===p.role&&d.to===request.from);if(!old)fail('L’engagement à réviser n’est plus actif.');}
  if(!replacesId&&['rejected','closed'].includes(request.status))fail('Cette demande est clôturée ou refusée.');
  const quantity=Number(b.quantity),delivery=Number(b.delivery),unitPrice=['buying','planning'].includes(p.role)?0:Number(b.unitPrice);
- if(!Number.isInteger(quantity)||quantity<1||quantity>request.quantity||!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>10000||!Number.isInteger(delivery)||delivery<780||delivery>1320)fail('Vérifiez la quantité (dans le besoin demandé), le prix et l’heure (13 h à 22 h).');
+ if(!Number.isInteger(quantity)||quantity<1||quantity>request.quantity||!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>10000||!Number.isInteger(delivery)||delivery<780||delivery>1439)fail('Vérifiez la quantité (dans le besoin demandé), le prix et l’heure (13 h à 23 h 59).');
  const transport=b.transport==='express'?'express':'normal';
- return {type:'offer',from:p.role,to:request.from,requestId:request.id,replacesId:replacesId||null,quantity,unitPrice,delivery,transport,text:String(b.text||'').trim().slice(0,1200)};
+ return {type:'offer',from:p.role,to:request.from,requestId:request.id,replacesId:replacesId||null,quantity,unitPrice,delivery,transport,...(supplierRole(p.role)&&g.productionWindows?.[p.role]?{productionStart:g.productionWindows[p.role].start}:{}),text:String(b.text||'').trim().slice(0,1200)};
 }
 export function workflowCheck(g,p,b){
  if(g.workflow!==2)fail('Créez une nouvelle séance pour utiliser le parcours structuré.');
  const m=workflowCandidate(g,p,b),base=workflowBase(g,m),report=workflowOfferReport(g,m),request=g.documents.find(d=>d.id===m.requestId);
  let feasibleQuantity=0;for(let quantity=1;quantity<=request.quantity;quantity++){if(workflowOfferReport(g,{...m,quantity,delivery:request.delivery}).ok)feasibleQuantity=quantity;}
- let fullEarliest=null;if(supplierRole(p.role)){const booked=accepted(base,p.role).reduce((n,d)=>n+d.quantity,0),r=base.resources[p.role];if(booked+request.quantity<=supplierCapacity(r))fullEarliest=supplierDelivery(r,booked+request.quantity);}
+ let fullEarliest=null;if(supplierRole(p.role)){const booked=accepted(base,p.role).reduce((n,d)=>n+d.quantity,0),r=base.resources[p.role];if(booked+request.quantity<=supplierCapacity(r))fullEarliest=workflowOfferReport(g,{...m,quantity:request.quantity}).earliest;}
  else {const full=workflowOfferReport(g,{...m,quantity:request.quantity});if(full.available>=request.quantity)fullEarliest=full.earliest;}
- return {...report,requestedQuantity:request.quantity,requestedDelivery:request.delivery,feasibleQuantityAtRequestedTime:feasibleQuantity,earliestForFullQuantity:fullEarliest};
+ let production=null;
+ if(supplierRole(p.role)){
+  const r=base.resources[p.role],earlier=accepted(base,p.role),booked=earlier.reduce((n,d)=>n+d.quantity,0),prior=Math.max(0,booked-r.stock);
+  const schedule=supplierProduction(r,earlier,m);let maxAtSelectedTime=0;
+  for(let quantity=1;quantity<=Math.max(0,supplierCapacity(r)-booked);quantity++)if(supplierProduction(r,earlier,{...m,quantity}).earliestDelivery<=m.delivery)maxAtSelectedTime=quantity;
+  production={...schedule,maxAtSelectedTime,selectedDelivery:m.delivery,materialsRemaining:Math.max(0,r.rawStock-prior),productionRemaining:Math.max(0,r.productionCapacity-prior)};
+ }
+ return {...report,production,requestedQuantity:request.quantity,requestedDelivery:request.delivery,feasibleQuantityAtRequestedTime:feasibleQuantity,earliestForFullQuantity:fullEarliest};
 }
 function appendWorkflow(g,d){d.id=crypto.randomUUID();d.ref=(d.type==='request'?'DEM':'DEV')+'-'+String(g.documents.length+1).padStart(3,'0');d.at=Date.now();d.round=g.round;g.documents.push(d);return d;}
 function workflowRequest(g,p,b){
  if(!(REQUEST_ROUTES[p.role]||[]).includes(b.to))fail('Cette demande doit suivre le circuit Client → Planification → Achats → Fournisseurs, ou Planification → Opérations.');
- const quantity=Number(b.quantity),delivery=Number(b.delivery);if(!Number.isInteger(quantity)||quantity<1||quantity>120||!Number.isInteger(delivery)||delivery<780||delivery>1320)fail('Indiquez une quantité de 1 à 120 et une heure entre 13 h et 22 h.');
+ const quantity=Number(b.quantity),delivery=Number(b.delivery);if(!Number.isInteger(quantity)||quantity<1||quantity>120||!Number.isInteger(delivery)||delivery<780||delivery>1439)fail('Indiquez une quantité de 1 à 120 et une heure entre 13 h et 23 h 59.');
  const parent=g.documents.find(d=>d.id===b.parentId&&d.type==='request'&&(d.to===p.role||d.id==='NEED-1'));
  if(p.role!=='client'&&!parent)fail('Reliez cette demande au besoin client ou à une demande reçue.');
  const d=appendWorkflow(g,{type:'request',kind:p.role==='client'?'need':b.to==='ops'?'service':'sourcing',from:p.role,to:b.to,parentId:parent?.id||null,quantity,delivery,unitPrice:0,text:String(b.text||'').trim().slice(0,1200),status:'open',replacesId:b.replacesId||null});
@@ -298,7 +319,7 @@ export function workflowAct(g,p,op,b){
   const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);
   if(!sourcing||!operation)fail('Faites confirmer les engagements Achats et Opérations avant le plan.',409);
   if(operation.transport!==b.transport)fail('Le transport doit correspondre à l’engagement Opérations. Demandez une révision.',409);
-  const candidate={quantity:b.quantity,transport:b.transport},result=assess({...g,promise:{quantity:b.quantity,delivery:1320}},candidate);
+  const candidate={quantity:b.quantity,transport:b.transport},result=assess({...g,promise:{quantity:b.quantity,delivery:1439}},candidate);
   if(!result.valid)fail('Plan impossible : '+result.reasons.join(' '),409);
   g.plan={...candidate,at:Date.now(),round:g.round};log(g,p.role,`Plan confirmé : ${b.quantity} coffrets, transport ${b.transport}`);return;
  }

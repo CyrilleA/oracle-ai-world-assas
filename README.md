@@ -21,12 +21,14 @@ Le fichier `site/index.html` fonctionne aussi directement dans un navigateur. So
 - Les schémas d’Agentic Enterprise s’agrandissent au clic.
 - Le simulateur TECHINDUS conserve les choix sur l’appareil utilisé, si le navigateur autorise le stockage local.
 
-Les notes, scénarios et corrigés font partie du site public. Les élèves peuvent les consulter. Ce portail ne gère pas encore de sessions collectives, de réponses centralisées ni de scores synchronisés : chaque appareil utilise son propre état local.
+Les notes, scénarios et corrigés de la présentation font partie du site public. Le QR code mène à une page de jeu distincte (`jeu.html`), sans navigation vers la présentation. La console (`animateur.html`) crée une séance et projette les résultats après clôture du vote. Ses commandes et agrégats sont protégés par une clé vérifiée sur le serveur Cloudflare.
+
+Voir [le guide du jeu collectif](docs/jeu-collectif.md) pour le déroulement, la configuration et la portée de cette séparation. Le scénario consultable dans le portail reste une prévisualisation individuelle.
 
 ## Mettre à jour et publier
 
 1. Modifier `site/index.html`.
-2. Lancer `npm test` avec Node.js 22 ou plus récent.
+2. Lancer `npm ci`, `npm test` et `npm run test:live` avec Node.js 24.
 3. Envoyer le commit sur la branche `main`.
 4. Vérifier le workflow **Publier le portail** dans l’onglet **Actions**.
 

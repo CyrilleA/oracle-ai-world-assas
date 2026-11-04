@@ -18,22 +18,14 @@ Documentation officielle :
 - https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 - https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
 
-## Ce que le portail permet aujourd’hui
+## Votes collectifs
 
-Chaque élève peut explorer les contenus et manipuler le simulateur sur son téléphone. Le professeur peut projeter sa propre version. Leurs choix ne sont pas synchronisés entre appareils.
+Les fichiers statiques restent sur GitHub Pages. Le jeu `jeu.html` et la console protégée `animateur.html` utilisent un Worker Cloudflare et un Durable Object SQLite pour centraliser les réponses. Le paramètre `api` de `site/live-config.json` doit contenir l’origine HTTPS effectivement déployée ; une valeur vide laisse le jeu en attente d’activation.
 
-## Ajouter des jeux synchronisés
+Le service est prévu pour un compte Workers Free, dans les quotas gratuits. Environ 30 téléphones pendant une matinée, avec une interrogation toutes les cinq secondes puis arrêt après le jeu, reste sous le quota de 100 000 requêtes par jour. L’usage total du compte et les limites de stockage et de calcul s’appliquent aussi. Le code ne souscrit aucun forfait payant.
 
-Un quiz collectif demande un serveur supplémentaire : création de session, code d’équipe, réception des réponses, règles de score, commandes réservées à l’animateur et diffusion des résultats.
+Voir [le guide du jeu collectif](jeu-collectif.md). Documentation officielle :
 
-Cloudflare Workers avec un Durable Object SQLite et WebSocket Hibernation constitue une piste avec offre gratuite. Au 4 novembre 2026, le palier gratuit Durable Objects comprend notamment 100 000 requêtes par jour et 13 000 GB-s de durée par jour. Les limites des Workers et du stockage s’appliquent aussi. Un dépassement du palier gratuit provoque des erreurs. L’usage réel doit être contrôlé avant la séance.
-
-Pour une classe de 30 élèves et quelques manches, une implémentation sobre avec connexions WebSocket et hibernation paraît compatible avec ce palier. Il s’agit d’une estimation d’architecture, pas d’une garantie de coût ni d’un serveur déjà livré.
-
-Documentation officielle :
-
+- https://developers.cloudflare.com/workers/platform/pricing/
 - https://developers.cloudflare.com/durable-objects/platform/pricing/
 - https://developers.cloudflare.com/durable-objects/platform/limits/
-- https://developers.cloudflare.com/durable-objects/best-practices/websockets/
-
-GitHub Pages seul ne fournit pas de serveur applicatif ou de base de données pour ces jeux. La console animateur des jeux devra utiliser une autorisation vérifiée par le serveur ; un bouton caché côté navigateur ne suffit pas.

@@ -57,7 +57,7 @@ for(let i=0;i<5;i++){
  assert.ok(src.includes('start='+run('FEATURE_VIDEOS[state.feature].start')));
  const end=run('FEATURE_VIDEOS[state.feature].end');if(end)assert.ok(src.includes('end='+end));
 }
-run("navigate('scm')");
+run("navigate('scm');state.scmView=1;render()");
 for(let i=0;i<6;i++){run(`state.module=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MODULES[state.module].question')));}
 run("navigate('deleguer')");
 assert.ok(nodes.get('#main').innerHTML.includes('Oracle Fusion Cloud SCM'));
@@ -77,7 +77,7 @@ for(let i=0;i<5;i++){run(`state.career=${i};render()`);assert.ok(nodes.get('#mai
 assert.ok(nodes.get('#main').innerHTML.includes('p. 8–9'));
 for(const a of ['help','sources','transverse','pause','fin']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'),a+' : fenêtre nommée');run('closeModal()');}
 for(let i=0;i<3;i++){run(`demoModal(${i},false)`);for(let s=0;s<3;s++){run(`state.demoStep=${s};drawDemo()`);assert.ok(nodes.get('#modal').innerHTML.includes(run('DEMOS[state.demo].explain[state.demoStep]')));}run(`demoModal(${i},true)`);assert.ok(!nodes.get('#modal').innerHTML.includes('<iframe'),'Vidéo chargée uniquement au clic');run("action('video-load')");assert.ok(nodes.get('.video-player').innerHTML.includes('youtube-nocookie.com'));run('closeModal()');}
-check('Object.keys(SOURCES).length===25','25 références officielles');
+check('Object.keys(SOURCES).length===29','29 références officielles');
 run("navigate('frise');state.timelineStep=0;render()");
 for(let i=0;i<7;i++){check(`state.timelineStep===${i}`,'Index du jalon');assert.ok(nodes.get('#main').innerHTML.includes(run('TIMELINE[state.timelineStep].meaning')));if(i<6)run("action('time-next')");}
 assert.ok(nodes.get('#main').innerHTML.includes('Vers l’Agentic Enterprise'));
@@ -106,5 +106,10 @@ check("MORNING_AGENDA.find(r=>r.route==='demos').end-MORNING_AGENDA.find(r=>r.ro
 check("MORNING_AGENDA.find(r=>r.route==='frise').end-MORNING_AGENDA.find(r=>r.route==='frise').start===20",'ChatGPT : 20 minutes');
 check("MORNING_AGENDA.find(r=>r.route==='enterprise').end-MORNING_AGENDA.find(r=>r.route==='enterprise').start===20",'Agentic Enterprise : 20 minutes');
 run("navigate('parcours')");assert.ok(nodes.get('#main').innerHTML.includes('Et vous, demain ?'));run("action('pause')");assert.ok(nodes.get('#modal').innerHTML.includes('Reprise à 11 h'));run('closeModal()');
-console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,5 métiers issus du PDF,25 sources et180 minutes.');
+console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,5 métiers issus du PDF,29 sources et180 minutes.');
 console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu dans un navigateur.');
+
+run("navigate('scm');state.scmView=0;render()");
+assert.ok(!nodes.get('#main').innerHTML.includes('Animer le jeu de découverte SCM'));
+assert.ok(nodes.get('#main').innerHTML.includes('75 %'));assert.ok(nodes.get('#main').innerHTML.includes('Calendriers prévisionnels'));
+for(let i=0;i<4;i++){run(`state.infraLayer=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('ORACLE_INFRA[state.infraLayer].title')));}

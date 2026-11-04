@@ -80,7 +80,7 @@ export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA
  return `Besoin actuel : ${g.demand} coffrets. Budget total maximal : ${money(g.budget)}. Promesse actuelle : ${g.promise.quantity} coffrets avant ${clock(g.promise.delivery)}. Vous seul acceptez une nouvelle promesse proposée par la planification.`;}
 export function view(g,p,admin=false,ready=false){
  const role=p?.role||'',team=ROLES.find(r=>r.id===role);
- return {game:'supply',workflow:g.workflow||1,documents:g.workflow===2?g.documents.filter(d=>admin||d.from===role||d.to===role).map(d=>({...d,requestRef:g.documents.find(x=>x.id===d.requestId)?.ref,parentRef:g.documents.find(x=>x.id===d.parentId)?.ref,replacesRef:g.documents.find(x=>x.id===d.replacesId)?.orderRef,health:d.type==='offer'&&d.status==='accepted'?workflowHealth(g,d):null})):[],code:g.code,phase:g.phase,round:g.round,revision:g.revision,expires:g.expires,joined:!!p,playerId:p?.id,role,isCaptain:p?captain(g,p):false,team,brief:role?teamBrief(g,role):null,
+ return {game:'supply',workflow:g.workflow||1,inputs:g.workflow===2&&role==='ops'?workflowInputs(g):null,documents:g.workflow===2?g.documents.filter(d=>admin||d.from===role||d.to===role).map(d=>({...d,requestRef:g.documents.find(x=>x.id===d.requestId)?.ref,parentRef:g.documents.find(x=>x.id===d.parentId)?.ref,replacesRef:g.documents.find(x=>x.id===d.replacesId)?.orderRef,health:d.type==='offer'&&d.status==='accepted'?workflowHealth(g,d):null})):[],code:g.code,phase:g.phase,round:g.round,revision:g.revision,expires:g.expires,joined:!!p,playerId:p?.id,role,isCaptain:p?captain(g,p):false,team,brief:role?teamBrief(g,role):null,
  roles:ROLES.map(r=>({...r,members:members(g,r.id).map((x,i)=>({id:x.id,captain:(g.captains?.[r.id]||members(g,r.id)[0]?.id)===x.id})),count:members(g,r.id).length})),participants:Object.keys(g.players).length,
  demand:g.demand,budget:g.budget,promise:g.promise,plan:g.plan,assessment:assess(g),aiEnabled:g.aiEnabled,aiReady:ready,aiLimit:g.aiLimit,aiUsed:admin?g.aiUsed:(g.aiUsed[role]||0),
  messages:g.messages.filter(m=>admin||m.from===role||m.to===role),proposals:g.proposals.filter(m=>admin||m.from===role),events:g.events.filter(e=>admin||e.target==='all'||e.target===role),
@@ -175,8 +175,9 @@ function workflowSources(g){
  const rows=['supplierA','supplierB'].map(id=>{const orders=accepted(g,id);return {quantity:Math.min(supplierCapacity(g.resources[id]),orders.reduce((n,d)=>n+d.quantity,0)),delivery:orders.length?Math.max(supplierDelivery(g.resources[id],orders.reduce((n,d)=>n+d.quantity,0)),...orders.map(d=>d.delivery)):0,cost:orders.reduce((n,d)=>n+d.quantity*d.unitPrice,0)};});
  return {quantity:Math.max(0,rows.reduce((n,r)=>n+r.quantity,0)-g.resources.ops.quarantine),delivery:Math.max(...rows.map(r=>r.delivery)),cost:rows.reduce((n,r)=>n+r.cost,0)};
 }
+function workflowInputs(g){const sourcing=accepted(g,'buying').at(-1),source=workflowSources(g),quantity=Math.min(sourcing?.quantity||0,source.quantity);return {ready:!!sourcing&&workflowHealth(g,sourcing).ok&&quantity>0,quantity:sourcing&&workflowHealth(g,sourcing).ok?quantity:0};}
 function workflowBase(g,m){return m.replacesId?{...g,documents:g.documents.filter(d=>d.id!==m.replacesId)}:g;}
-function workflowDependencies(g,role){return accepted(g).filter(d=>role==='buying'||role==='ops'?supplierRole(d.from):role==='planning'?['buying','ops'].includes(d.from):false).map(d=>d.id);}
+function workflowDependencies(g,role){return accepted(g).filter(d=>role==='buying'?supplierRole(d.from):role==='ops'?supplierRole(d.from)||d.from==='buying':role==='planning'?['buying','ops'].includes(d.from):false).map(d=>d.id);}
 function workflowOfferReport(original,m,existing=false){
  const g=workflowBase(original,m),errors=[],warnings=[],q=m.quantity,r=g.resources[m.from];let available=0,earliest=null,cost=null;
  if(supplierRole(m.from)){
@@ -191,7 +192,9 @@ function workflowOfferReport(original,m,existing=false){
   if(q>available)errors.push('Les commandes fournisseurs confirmées ne couvrent pas la quantité annoncée.');
   if(earliest!==null&&m.delivery<earliest)errors.push('Les fournisseurs confirmés ne livrent pas assez tôt.');
  }else if(m.from==='ops'){
-  const source=workflowSources(g);available=Math.min(source.quantity,r.capacity,r.packagingStock??Infinity);cost=source.cost+q*m.unitPrice+(m.transport==='express'?28000:12000);
+  const source=workflowSources(g),sourcing=accepted(g,'buying').at(-1);available=Math.min(source.quantity,sourcing?.quantity||0,r.capacity,r.packagingStock??Infinity);
+  if(!sourcing||!workflowHealth(g,sourcing).ok)errors.push('Attendez la confirmation des approvisionnements par les Achats et la Planification.');
+  cost=source.cost+q*m.unitPrice+(m.transport==='express'?28000:12000);
   earliest=q<=available?source.delivery+Math.ceil(q/r.rate*60)+Math.max(0,r.travel-(m.transport==='express'?30:0)):null;
   if(q>available)errors.push('Les commandes fournisseurs, les emballages et la capacité de préparation ne couvrent pas cette quantité.');
   if(earliest!==null&&m.delivery<earliest)errors.push('La réception des composants, la préparation et le transport ne permettent pas cette heure.');

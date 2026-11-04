@@ -2,7 +2,7 @@ import {esc} from './live-common.mjs';
 import {metrics,inventoryCards,euro,time,teamName} from './supply-ui.mjs';
 const routes={client:['planning'],planning:['buying','ops'],buying:['supplierA','supplierB']};
 const labels={open:'À traiter',partial:'Partiellement couverte',closed:'Couverte',pending:'À confirmer',accepted:'Engagement confirmé',superseded:'Remplacé par une révision',released:'Libéré',rejected:'Refusé'};
-let frame='',state=null,main=null,actions=null,mode='request',requestId='',replacesId='',checked='',checking=false,checkTimer=null,checkSequence=0;
+let frame='',state=null,main=null,actions=null,mode='request',requestId='',replacesId='',checked='',checking=false,checkTimer=null,checkSequence=0,lastFocusHtml='';
 const $=q=>main.querySelector(q);
 const signature=b=>JSON.stringify(b);
 export function workflowCard(s,d,{admin=false}={}){
@@ -12,11 +12,12 @@ export function workflowCard(s,d,{admin=false}={}){
 }
 
 // Une action principale à la fois, calculée à partir des documents visibles de l'équipe.
-export function nextTask(s){
+function chooseTask(s){
  const docs=s.documents||[],live=d=>d.type==='offer'&&d.status==='accepted',incoming=docs.filter(d=>d.type==='request'&&d.to===s.role&&!['closed','rejected'].includes(d.status));
  if(s.phase!=='running')return {kind:'wait',title:s.phase==='waiting'?'Votre équipe est prête.':s.phase==='paused'?'Le jeu est en pause.':'La partie est terminée.',text:s.phase==='waiting'?'L’animateur va démarrer. Vous pouvez déjà découvrir vos ressources.':s.phase==='paused'?'Attendez le signal de l’animateur.':'Regardez le bilan avec l’animateur.'};
  const proposal=s.proposals?.find(p=>p.status==='proposed');
  if(proposal&&s.isCaptain)return {kind:'approve',doc:proposal,title:'Votre équipe a préparé une proposition.',text:`${proposal.documentAction?proposal.payload.quantity+' unités à '+time(proposal.payload.delivery):proposal.text}`,button:'Confirmer la proposition'};
+ if(proposal&&!s.isCaptain)return {kind:'wait',title:'Votre proposition attend votre capitaine.',text:'Il doit la confirmer avant son envoi à l’autre équipe.'};
  const offer=docs.find(d=>d.type==='offer'&&d.to===s.role&&d.status==='pending'&&d.round===s.round);
  if(offer)return s.isCaptain?{kind:'accept',doc:offer,title:`${teamName(s,offer.from)} vous propose une solution.`,text:`${offer.quantity} unités à ${time(offer.delivery)}${['supplierA','supplierB','ops'].includes(offer.from)?' · '+euro(offer.quantity*offer.unitPrice):''}`,button:['supplierA','supplierB'].includes(offer.from)?'Commander':'Accepter cette proposition'}:{kind:'wait',title:'Une proposition est arrivée.',text:'Votre capitaine doit la valider. Discutez du choix avec votre équipe.'};
  const receivedRisk=docs.find(d=>live(d)&&d.to===s.role&&d.health&&!d.health.ok);
@@ -24,9 +25,12 @@ export function nextTask(s){
   if(docs.some(d=>d.type==='request'&&d.replacesId===receivedRisk.id&&d.status==='open'))return {kind:'wait',title:teamName(s,receivedRisk.from)+' revoit sa solution.',text:'Sa nouvelle proposition apparaîtra ici. L’engagement actuel reste enregistré.'};
   return {kind:'renegotiate',doc:receivedRisk,title:'Une solution ne tient plus.',text:`${teamName(s,receivedRisk.from)} doit revoir son engagement.`,button:'Demander une nouvelle proposition'};
  }
+ if(s.role==='ops'&&s.inputs?.ready===false&&(incoming.length||docs.some(d=>live(d)&&d.from==='ops')))return {kind:'wait',title:'Les composants doivent être confirmés.',text:'Les Achats et la Planification doivent d’abord confirmer les approvisionnements.'};
  const risk=docs.find(d=>live(d)&&d.from===s.role&&d.health&&!d.health.ok);
+ if(risk&&docs.some(d=>d.type==='offer'&&d.from===s.role&&d.status==='pending'&&d.round===s.round&&d.replacesId===risk.id))return {kind:'wait',title:'Votre nouvelle proposition attend une décision.',text:'L’autre équipe doit l’accepter avant de remplacer l’engagement actuel.'};
  if(risk)return {kind:'revise',doc:risk,title:'Votre engagement doit être revu.',text:`${risk.quantity} unités à ${time(risk.delivery)} : les conditions ont changé.`,button:'Proposer une autre solution'};
  const unanswered=incoming.find(r=>!docs.some(d=>d.type==='offer'&&d.requestId===r.id&&d.from===s.role&&d.status==='pending'&&d.round===s.round));
+ if(s.role==='ops'&&unanswered&&s.inputs?.ready===false)return {kind:'wait',title:'Les composants ne sont pas encore confirmés.',text:'Les Achats et la Planification doivent d’abord confirmer les approvisionnements.'};
  if(['supplierA','supplierB','ops'].includes(s.role))return unanswered?{kind:'respond',doc:unanswered,title:`${teamName(s,unanswered.from)} attend votre réponse.`,text:`${unanswered.quantity} unités avant ${time(unanswered.delivery)}.`,button:'Préparer ma réponse'}:{kind:'wait',title:'Vous êtes à jour.',text:'Votre prochaine demande ou la réponse à votre offre apparaîtra ici.'};
  if(s.role==='buying'){
   const need=incoming[0],orders=docs.filter(d=>live(d)&&['supplierA','supplierB'].includes(d.from)),covered=orders.reduce((n,d)=>n+d.quantity,0);
@@ -47,6 +51,45 @@ export function nextTask(s){
  if(s.role==='client'&&docs.some(d=>live(d)&&d.to==='client'))return {kind:'wait',title:'Votre promesse est confirmée.',text:'La quantité et le délai acceptés sont enregistrés. Vous serez avertis si la situation change.'};
  return {kind:'wait',title:offer?'Votre capitaine doit choisir cette proposition.':'Votre demande est en cours.',text:offer?'Discutez du choix avec votre équipe.':'La Planification organise les composants et la livraison. Sa proposition apparaîtra ici.'};
 }
+function waiting(on,title,text,next){return {kind:'wait',waitingOn:on,title,text,next};}
+export function nextTask(s){
+ const task=chooseTask(s);if(task.kind!=='wait')return task;
+ if(s.phase==='finished')return {...task,waitingOn:[],complete:true};
+ if(s.phase!=='running')return {...task,waitingOn:['animateur'],next:'L’action suivante apparaîtra dès que l’animateur ouvrira le jeu.'};
+ const docs=s.documents||[],live=d=>d.type==='offer'&&d.status==='accepted';
+ if(!s.isCaptain&&s.proposals?.some(p=>p.status==='proposed'))return waiting(['captain'],'Votre proposition attend votre capitaine.','Il doit la confirmer avant son envoi à l’autre équipe.','La décision de votre capitaine apparaîtra ici.');
+ const received=docs.find(d=>d.type==='offer'&&d.to===s.role&&d.status==='pending'&&d.round===s.round);
+ if(received&&!s.isCaptain)return waiting(['captain'],'Votre capitaine doit choisir.',`Une proposition de ${teamName(s,received.from)} a été reçue.`, 'Après sa décision, votre équipe passera à l’étape suivante.');
+ const revision=docs.find(d=>d.type==='request'&&d.from===s.role&&d.replacesId&&d.status==='open');
+ if(revision)return waiting([revision.to],teamName(s,revision.to)+' prépare une nouvelle solution.',`Vous avez demandé une révision pour ${revision.quantity} unités à ${time(revision.delivery)}.`, 'Vous pourrez accepter ou refuser sa nouvelle proposition.');
+ const pending=docs.filter(d=>d.type==='offer'&&d.from===s.role&&d.status==='pending'&&d.round===s.round);
+ if(pending.length){const on=[...new Set(pending.map(d=>d.to))];return waiting(on,'Votre proposition a été envoyée.',`${pending[0].quantity} unités à ${time(pending[0].delivery)} : ${on.length===1?'l’équipe':'les équipes'} ${on.map(r=>teamName(s,r)).join(' et ')} ${on.length===1?'doit':'doivent'} maintenant décider.`, pending[0].replacesId?'Après acceptation, cette offre remplacera votre engagement actuel.':s.role==='planning'?'Après acceptation, la promesse au Client sera confirmée.':s.role==='ops'?'La Planification pourra ensuite préparer la promesse au Client.':s.role==='buying'?'La Planification pourra ensuite organiser la livraison.':'Après acceptation, les quantités seront réservées pour les Achats.');}
+ if(['supplierA','supplierB'].includes(s.role)){
+  if(docs.some(d=>live(d)&&d.from===s.role))return {...task,title:'Votre engagement est confirmé.',text:'Les Achats ont accepté votre proposition. Les autres équipes organisent la suite.',waitingOn:[],complete:true};
+  return waiting(['buying'],'Les Achats doivent vous consulter.','Aucune demande de prix à traiter pour le moment.','Vous pourrez indiquer la quantité, le prix et le délai que vous pouvez tenir.');
+ }
+ if(s.role==='ops'){
+  if(s.inputs?.ready===false&&(docs.some(d=>d.type==='request'&&d.to==='ops'&&!['closed','rejected'].includes(d.status))||docs.some(d=>live(d)&&d.from==='ops')))return waiting(['buying'],'Les composants doivent être confirmés.','Votre demande est reçue, mais les approvisionnements ne sont pas encore confirmés.','Vous pourrez proposer la préparation et la livraison des coffrets.');
+  if(docs.some(d=>live(d)&&d.from==='ops'))return {...task,title:'Votre livraison est confirmée.',text:'La Planification s’appuie sur votre engagement pour répondre au Client.',waitingOn:[],complete:true};
+  return waiting(['planning'],'La Planification doit vous solliciter.','Vous n’avez pas encore reçu de demande de préparation et de livraison.','Vous pourrez vérifier vos capacités et proposer votre solution.');
+ }
+ if(s.role==='buying'){
+  const need=docs.find(d=>d.type==='request'&&d.to==='buying'&&!['closed','rejected'].includes(d.status));
+  if(!need){if(docs.some(d=>live(d)&&d.from==='buying'))return {...task,waitingOn:[],complete:true};return waiting(['planning'],'La Planification doit préciser son besoin.','Aucune demande de composants à traiter pour le moment.','Vous pourrez consulter les fournisseurs.');}
+  const open=docs.filter(d=>d.type==='request'&&d.from==='buying'&&['supplierA','supplierB'].includes(d.to)&&['open','partial'].includes(d.status));
+  const on=[...new Set(open.map(d=>d.to))];return waiting(on.length?on:['supplierA','supplierB'],'Les fournisseurs préparent leurs offres.', 'Vous recevrez les quantités, prix et délais qu’ils peuvent proposer.','Vous pourrez choisir les offres et confirmer les commandes.');
+ }
+ if(s.role==='planning'){
+  const need=docs.some(d=>d.type==='request'&&d.to==='planning'&&!['closed','rejected'].includes(d.status));
+  if(!need)return {...task,waitingOn:[],complete:true};
+  if(!docs.some(d=>live(d)&&d.from==='buying'))return waiting(['buying'],'Les Achats recherchent les composants.','Votre demande a été envoyée aux Achats. Ils consultent les fournisseurs et confirment les commandes.','Vous pourrez accepter leur solution, puis organiser la livraison.');
+  if(!docs.some(d=>live(d)&&d.from==='ops'))return waiting(['ops'],'L’équipe Livraison prépare sa solution.','Votre demande de préparation et de livraison lui a été transmise.','Vous pourrez accepter sa solution, puis proposer une promesse au Client.');
+  return {...task,waitingOn:['captain'],next:'Votre capitaine pourra préparer la promesse au Client.'};
+ }
+ if(s.role==='client'&&docs.some(d=>live(d)&&d.to==='client'))return {...task,waitingOn:[],complete:true};
+ return waiting(['planning'],'La Planification organise votre demande.','Elle attend les engagements des Achats et de la Livraison avant de vous répondre.','Vous pourrez accepter sa promesse ou demander une autre solution.');
+}
+function waitName(s,id){return id==='animateur'?'l’animateur':id==='captain'?'votre capitaine':teamName(s,id);}
 function body(){const f=new FormData($('#wf-form')),hm=String(f.get('delivery')).split(':').map(Number);return {to:f.get('to'),parentId:f.get('parent'),requestId,replacesId,quantity:Number(f.get('quantity')),delivery:hm[0]*60+hm[1],unitPrice:Math.round(Number(f.get('price')||0)*100),transport:f.get('transport')||'normal',text:String(f.get('text')||'')};}
 function notice(text){$('#s-error').textContent=text;$('#s-error').hidden=!text;}
 function updateSubmit(){const b=body();$('#wf-submit').disabled=state.phase!=='running'||checking||(mode==='quote'&&checked!==signature(b));}
@@ -82,6 +125,7 @@ function openForm(next,doc=null,target=null,old=null){
  let q=next==='request'?requestQuantity(received,to):old?.quantity||doc.quantity;
  if(next==='quote'&&!old&&state.inventory?.remaining!==undefined)q=Math.min(q,Math.max(1,state.inventory.remaining));
  if(next==='quote'&&state.role==='buying'){const orders=state.documents.filter(d=>d.type==='offer'&&d.status==='accepted'&&['supplierA','supplierB'].includes(d.from));q=Math.min(q,orders.reduce((n,d)=>n+d.quantity,0)||q);}
+ if(next==='quote'&&state.role==='ops'&&state.inputs?.quantity>0&&!old)q=Math.min(q,state.inputs.quantity);
  $('#wf-form input[name=quantity]').value=q;
  let delivery=old?.delivery||doc?.delivery||state.promise.delivery;
  if(next==='request'&&state.role==='planning'&&to==='buying')delivery=Math.max(780,delivery-Math.ceil(q/40*60)-60);
@@ -103,7 +147,7 @@ async function executeTask(task){
 }
 export function renderWorkflow(root,s,callbacks){main=root;state=s;actions=callbacks;
  const id=s.code+':'+s.role+':'+s.isCaptain;
- if(frame!==id){clearTimeout(checkTimer);checkSequence++;frame=id;checking=false;mode='request';requestId='';replacesId='';checked='';
+ if(frame!==id){clearTimeout(checkTimer);checkSequence++;frame=id;lastFocusHtml='';checking=false;mode='request';requestId='';replacesId='';checked='';
  root.innerHTML=`<div class="eyebrow">Mon équipe</div><h1>${esc(s.team.name)}</h1><p class="workflow-goal">Objectif commun : ${s.demand} coffrets avant ${time(s.promise.delivery)}</p><p class="hint">${s.isCaptain?'Vous êtes capitaine : vous confirmez les décisions.':'Vous préparez des propositions pour votre capitaine.'}</p><p id="s-error" role="status" class="error" hidden></p><div id="wf-latest-event"></div><section id="wf-focus" class="card workflow-focus"></section><section id="wf-editor" class="card" hidden><h2 id="wf-title"></h2><form id="wf-form"><input type="hidden" name="to"><input type="hidden" name="parent"><div class="supply-form-grid"><label>Quantité<input type="number" name="quantity" min="1" max="120" required></label><label>Livraison à<input type="time" name="delivery" min="13:00" max="22:00" required></label><label id="wf-price">Prix par unité (€)<input type="number" name="price" min="0" max="100" step="0.01"></label></div><label id="wf-transport">Transport<select name="transport"><option value="normal">Normal · 120 €</option><option value="express">Express · 280 €</option></select></label><div id="wf-check-result" role="status" aria-live="polite"></div><details><summary>Ajouter un commentaire</summary><label>Commentaire facultatif<textarea name="text" maxlength="1200" rows="2"></textarea></label></details><div class="actions"><button class="btn primary" id="wf-submit">Envoyer</button><button class="btn secondary" type="button" id="wf-cancel">Retour</button></div></form></section><details class="card" id="wf-more"><summary>Mes ressources et l’historique</summary><div id="wf-resources"></div><h3>Mes engagements</h3><div id="wf-order-list"></div><h3>Les échanges en cours</h3><div id="wf-pending"></div><h3>Les demandes reçues</h3><div id="wf-request-list"></div><div id="wf-extra-actions" class="actions"></div><details><summary>Le plan du groupe</summary><div id="wf-metrics"></div></details><details><summary>Toutes les informations de l’animateur</summary><div id="wf-events"></div></details></details><details class="card" id="wf-chat"><summary>Échanger un message · avec ou sans IA</summary><form id="compose"><label>À qui ?<select name="to">${s.roles.filter(r=>r.id!==s.role).map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></label><label>Message ou consigne pour l’IA<textarea name="text" maxlength="1200" rows="3" required></textarea></label><div class="actions"><button type="button" class="btn secondary" id="manual">Rédiger sans IA</button><button type="button" class="btn secondary" id="assist">Préparer avec IA</button></div><p id="ai-status" class="hint"></p><p class="hint">L’IA prépare un texte à relire. Votre demande et le contexte de votre équipe sont transmis à OpenAI uniquement sur ce bouton.</p><label><input name="confirm" type="checkbox" required> J’ai relu ce message.</label><button class="btn primary">${s.isCaptain?'Envoyer le message':'Proposer à mon capitaine'}</button></form><div id="wf-comments"></div></details>`;
  $('#wf-cancel').onclick=()=>{clearTimeout(checkTimer);checkSequence++;checking=false;$('#wf-editor').hidden=true;$('#wf-focus').hidden=false;notice('');};
  $('#wf-form').oninput=()=>scheduleCheck();
@@ -112,7 +156,9 @@ export function renderWorkflow(root,s,callbacks){main=root;state=s;actions=callb
  $('#assist').onclick=actions.assist;$('#manual').onclick=()=>{$('#compose textarea').focus();$('#ai-status').textContent='Rédigez votre message, puis relisez-le.';};
  }
  const task=nextTask(s);
- $('#wf-focus').innerHTML=`<div class="eyebrow">${task.kind==='wait'?'Où en êtes-vous ?':'À vous de jouer'}</div><h2>${esc(task.title)}</h2><p>${esc(task.text)}</p>${task.button?`<button class="btn primary workflow-main-action" id="wf-next">${esc(task.button)}</button>`:''}${task.otherTarget?`<button class="btn secondary" id="wf-other">Consulter ${esc(teamName(s,task.otherTarget))}</button>`:''}${task.kind==='accept'?`<button class="text-btn" id="wf-refuse">Demander une autre solution</button>`:''}`;
+ const focusHtml=`<div class="eyebrow">${task.kind==='wait'?(task.complete?'Votre étape est terminée':'En attente'):'À vous de jouer'}</div>${task.waitingOn?.length?`<p class="workflow-wait-owner">⏳ En attente de : <strong>${esc(task.waitingOn.map(r=>waitName(s,r)).join(' · '))}</strong></p>`:''}<h2>${esc(task.title)}</h2><p>${esc(task.text)}</p>${task.next?`<p class="workflow-then"><strong>Ensuite :</strong> ${esc(task.next)}</p>`:''}${task.waitingOn?.length?'<p class="workflow-auto-update">Cette page se met à jour automatiquement.</p>':''}${task.button?`<button class="btn primary workflow-main-action" id="wf-next">${esc(task.button)}</button>`:''}${task.otherTarget?`<button class="btn secondary" id="wf-other">Consulter ${esc(teamName(s,task.otherTarget))}</button>`:''}${task.kind==='accept'?`<button class="text-btn" id="wf-refuse">Demander une autre solution</button>`:''}`;
+ if(lastFocusHtml!==focusHtml){$('#wf-focus').innerHTML=focusHtml;lastFocusHtml=focusHtml;}
+ $('#wf-focus').classList.toggle('workflow-waiting',!!task.waitingOn?.length);
  $('#wf-next')?.addEventListener('click',()=>executeTask(nextTask(state)));
  $('#wf-other')?.addEventListener('click',()=>openForm('request',task.doc,task.otherTarget));
  $('#wf-refuse')?.addEventListener('click',()=>actions.send('reject',{id:task.doc.id}));

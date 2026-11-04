@@ -1,3 +1,9 @@
+# Attentes entre équipes
+
+Lorsqu’aucune action n’est possible, l’écran nomme l’équipe attendue, l’information nécessaire et la prochaine étape. Après une offre envoyée, il attend la décision du destinataire ; après une demande, il attend la réponse de l’équipe sollicitée. Les attentes sont actualisées par la synchronisation automatique du jeu, sans recharger la page. Un engagement déjà confirmé affiche une étape terminée plutôt qu’une attente sans objet.
+
+La chaîne guidée est : Client → Planification → Achats → Fournisseurs → Achats → Planification → Opérations / livraison → Planification → Client. Les Opérations ne peuvent s’engager avant confirmation des approvisionnements par les Achats et la Planification ; ce contrôle est aussi effectué par le serveur, même en cas de consultation anticipée. Les quantités partielles confirmées restent utilisables pour une contre-proposition partielle.
+
 # Interface élèves simplifiée
 
 L’écran principal indique l’action suivante pour l’équipe : consulter les Achats, demander un prix, répondre, commander ou confirmer la promesse. Le destinataire et le besoin lié sont choisis automatiquement ; quantité et heure sont préremplies. Les ressources, références et historiques restent disponibles sous « Mes ressources et l’historique ».

@@ -1,3 +1,4 @@
+import {financeImpact} from './supply-finance.mjs';
 export const ROLES=[
  {id:'client',name:'Client',mission:'Obtenir 80 coffrets avant 19 h. Accepter ou renégocier la promesse.'},
  {id:'planning',name:'Planification',mission:'Coordonner les équipes, construire le plan et faire confirmer la promesse au client.'},
@@ -94,7 +95,7 @@ export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA
  return `Besoin actuel : ${g.demand} coffrets. Budget total maximal : ${money(g.budget)}. Promesse actuelle : ${g.promise.quantity} coffrets avant ${clock(g.promise.delivery)}. Vous seul acceptez une nouvelle promesse proposée par la planification.`;}
 export function view(g,p,admin=false,ready=false){
  const role=p?.role||'',team=ROLES.find(r=>r.id===role);
- return {game:'supply',workflow:g.workflow||1,inputs:g.workflow===2&&role==='ops'?workflowInputs(g):null,documents:g.workflow===2?g.documents.filter(d=>admin||d.from===role||d.to===role).map(d=>({...d,requestRef:g.documents.find(x=>x.id===d.requestId)?.ref,parentRef:g.documents.find(x=>x.id===d.parentId)?.ref,replacesRef:g.documents.find(x=>x.id===d.replacesId)?.orderRef,health:d.type==='offer'&&d.status==='accepted'?workflowHealth(g,d):null})):[],code:g.code,phase:g.phase,round:g.round,revision:g.revision,expires:g.expires,joined:!!p,playerId:p?.id,role,isCaptain:p?captain(g,p):false,team,brief:role?teamBrief(g,role):null,
+ return {game:'supply',workflow:g.workflow||1,inputs:g.workflow===2&&role==='ops'?workflowInputs(g):null,documents:g.workflow===2?g.documents.filter(d=>admin||d.from===role||d.to===role).map(d=>({...d,requestRef:g.documents.find(x=>x.id===d.requestId)?.ref,parentRef:g.documents.find(x=>x.id===d.parentId)?.ref,replacesRef:g.documents.find(x=>x.id===d.replacesId)?.orderRef,health:d.type==='offer'&&d.status==='accepted'?workflowHealth(g,d):null,...(!admin&&role&&d.type==='offer'&&d.status==='pending'&&d.round===g.round&&(d.from===role||d.to===role)?{financeImpact:financeImpact(g,role,d)}:{})})):[],code:g.code,phase:g.phase,round:g.round,revision:g.revision,expires:g.expires,joined:!!p,playerId:p?.id,role,isCaptain:p?captain(g,p):false,team,brief:role?teamBrief(g,role):null,
  roles:ROLES.map(r=>({...r,members:members(g,r.id).map((x,i)=>({id:x.id,captain:(g.captains?.[r.id]||members(g,r.id)[0]?.id)===x.id})),count:members(g,r.id).length})),participants:Object.keys(g.players).length,
  demand:g.demand,budget:g.budget,promise:g.promise,plan:g.plan,assessment:assess(g),aiEnabled:g.aiEnabled,aiReady:ready,aiLimit:g.aiLimit,aiUsed:admin?g.aiUsed:(g.aiUsed[role]||0),
  messages:g.messages.filter(m=>admin||m.from===role||m.to===role),proposals:g.proposals.filter(m=>admin||m.from===role),events:g.events.filter(e=>admin||e.target==='all'||e.target===role),

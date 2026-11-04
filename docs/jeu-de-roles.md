@@ -115,3 +115,29 @@ Créer une nouvelle séance de jeu de rôles pour disposer d’un chronométrage
 La phase IA a un plafond de **6 préparations par équipe**, soit 36 appels au maximum par séance ; un appel en échec consomme aussi ce quota afin d’éviter les boucles. Pas de relance payante automatique pour un contexte inchangé, ni d’appel en phase humaine. Le crédit API OpenAI doit être disponible. Un échec explicite laisse le jeu utilisable en traitement manuel, sans fausse réponse IA.
 
 Le contexte transmis ne contient que la demande, les documents visibles, les contraintes fictives du rôle et les options réalisables, sans identifiant élève, jeton ni données confidentielles des autres équipes. `store:false` est utilisé. Les textes reçus sont traités comme des données non fiables.
+
+
+## Objectifs économiques par équipe
+
+Hypothèses pédagogiques modifiables dans la console, rubrique « Objectifs économiques et rentabilité des équipes » :
+
+| Équipe | Objectif initial | Base de calcul |
+| --- | --- | --- |
+| Client | 25 % de marge | Recettes de la soirée moins achats, préparation et transport engagés |
+| Planification | 30 % de marge | Même résultat global que le Client, avec un objectif plus exigeant |
+| Achats | 15 % d’économies | Coût de référence des quantités commandées moins commandes acceptées, rapporté à ce coût de référence |
+| Fournisseur A | 20 % de marge | Ventes acceptées moins coûts des composants en stock et à fabriquer |
+| Fournisseur B | 20 % de marge | Même méthode, avec des coûts propres différents |
+| Opérations / livraison | 15 % de marge | Préparation et transport facturés moins coûts de préparation et de transport |
+
+La recette simulée est de 35 € par coffret ; le prix de référence achats est de 16 € par composant. Coûts économiques A : 8 € en stock, 9 € à fabriquer ; B : 10 € en stock, 11 € à fabriquer ; préparation : 4 € par coffret. Ces coûts restent distincts du prix plancher autorisé. Le stock est consommé avant la fabrication. Le transport est refacturé à son coût, inclus au dénominateur de la marge Opérations : il peut donc réduire le taux de marge sans réduire sa valeur en euros.
+
+Les marges sont rapportées aux recettes (et non aux coûts), calculées avant frais fixes et taxes ; ce ne sont pas des bénéfices comptables réalisés. Les Achats, centre de coût, affichent des économies et non un chiffre d’affaires fictif. Client et Planification partagent le résultat global : ne pas additionner ces indicateurs, ni les marges fournisseurs à la marge globale.
+
+Chaque mobile présente l’objectif, le résultat engagé, le résultat prévu et le détail du calcul. Une seule offre en cours est prise en compte dans la prévision de l’équipe ; des offres alternatives ne sont jamais cumulées. Un aperçu indique l’impact avant l’envoi d’une proposition ou l’acceptation d’une offre. Les achats manquants sont provisionnés au prix de référence dans la prévision globale, pour éviter d’afficher une marge artificiellement élevée avant les commandes.
+
+L’engagement des achats entraîne des coûts avant toute confirmation au Client : la contribution engagée Client/Planification peut donc être négative à cette étape. Les recettes engagées de la soirée apparaissent seulement lors de l’acceptation de la promesse par le Client. L’objectif global n’est atteint que si la quantité demandée est couverte et les engagements ne sont pas à risque. Chaque calcul reste simulé ; l’atteinte d’un objectif financier ne remplace pas le contrôle de délai et de faisabilité de la mission.
+
+L’animateur peut modifier les objectifs et coûts pendant la phase. Chaque modification et chaque action conserve un instantané (160 derniers) des indicateurs. L’élève ne reçoit que ses données, ses hypothèses et les huit derniers relevés de son équipe. Les coûts privés des autres équipes ne sont pas diffusés. Les deux bilans humain/IA incluent les indicateurs économiques ; le rejeu IA restaure les hypothèses économiques du démarrage humain. Pour comparer, conserver des contraintes et hypothèses équivalentes entre phases.
+
+L’IA reçoit uniquement l’objectif et les coûts propres de l’équipe ; elle dispose d’options de prix visant sa marge cible, plus d’options de compromis compatibles avec les contraintes métier. La cible n’est pas une interdiction : un humain peut accepter une marge moindre pour sauver la promesse client. Les contrôles de budget, stock et transport restent impératifs.

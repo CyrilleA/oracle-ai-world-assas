@@ -1,5 +1,5 @@
 import {esc,configuration,api,save,load,validRoom} from './live-common.mjs';
-import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=phases-20261104';
+import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=rentabilite-20261104';
 let base='',key='',code='',snapshot='',pollTimer=null,busy=false,kind=load('assas-active-kind')||'quiz';
 const sessionPath=()=>`/api/${kind==='supply'?'supply-sessions':'sessions'}/${code}`;
 const $=s=>document.querySelector(s),error=s=>{$('#host-error').textContent=s;};

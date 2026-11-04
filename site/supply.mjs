@@ -1,4 +1,4 @@
-import {renderWorkflow} from './supply-workflow.mjs?v=phases-20261104';
+import {renderWorkflow} from './supply-workflow.mjs?v=rentabilite-20261104';
 import {esc,configuration,api,save,load,roomCode,validRoom} from './live-common.mjs';
 import {metrics,messageCard,teamName,inventoryCards} from './supply-ui.mjs';
 const main=document.querySelector('#student'),network=document.querySelector('#network');

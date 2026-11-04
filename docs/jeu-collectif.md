@@ -40,7 +40,7 @@ npx wrangler secret put SESSION_KEY
 npm run deploy:live
 ```
 
-`ADMIN_PASSWORD` est le mot de passe personnel de l’animateur, de 16 à 256 caractères. Il est choisi par l’utilisateur dans le champ Secret du tableau de bord Cloudflare, sans le transmettre dans le chat. `SESSION_KEY` est une clé technique aléatoire réservée au serveur. Aucune de ces valeurs ne doit être committée, intégrée à `live-config.json` ni ajoutée aux QR codes.
+`ADMIN_PASSWORD` est le mot de passe personnel de l’animateur, de 15 à 256 caractères. Il est choisi par l’utilisateur dans le champ Secret du tableau de bord Cloudflare, sans le transmettre dans le chat. `SESSION_KEY` est une clé technique aléatoire réservée au serveur. Aucune de ces valeurs ne doit être committée, intégrée à `live-config.json` ni ajoutée aux QR codes.
 
 Le navigateur ne conserve jamais le mot de passe. Il reçoit un jeton signé valable 12 heures, ou sept jours si l’animateur choisit de rester connecté. Sans mémorisation, le jeton reste dans la session de l’onglet. Un changement du mot de passe invalide tous les jetons précédents. Les essais incorrects sont limités à cinq par adresse réseau sur dix minutes. Les anciens fichiers de clé et liens contenant `#key=` ne permettent plus de se connecter. Après déploiement, renseigner l’origine HTTPS retournée dans `site/live-config.json`, sous la clé `api`, puis publier les fichiers statiques sur GitHub Pages.
 

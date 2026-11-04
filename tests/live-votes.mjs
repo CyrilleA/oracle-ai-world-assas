@@ -4,7 +4,9 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const password='test-only-password-not-for-deployment';
+// Mot de passe fictif de 15 caractères : régression de la limite incohérente.
+const password='TEST-only-12345';
+assert.equal(password.length,15);
 let key='';
 const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:path.join(root,'.wrangler/build/worker.js'),compatibilityDate:'2026-10-01',
  durableObjects:{ROOMS:{className:'QuizRoom',useSQLite:true},LOGIN_LIMITS:{className:'LoginLimit',useSQLite:true}},bindings:{ADMIN_PASSWORD:password,SESSION_KEY:'test-signing-secret-32-characters-long',ALLOWED_ORIGINS:'https://cyrillea.github.io'}}));

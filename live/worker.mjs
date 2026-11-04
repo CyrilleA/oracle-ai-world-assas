@@ -27,7 +27,7 @@ export default {
     if (u.pathname==='/api/health' && request.method==='GET') return wrap(json({ok:true}));
     try {
       if(u.pathname==='/api/login' && request.method==='POST') {
-        if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<16||!env.SESSION_KEY) return wrap(json({error:'Le mot de passe animateur n’a pas encore été configuré.'},503));
+        if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<15||!env.SESSION_KEY) return wrap(json({error:'Le mot de passe animateur n’a pas encore été configuré.'},503));
         const raw=await request.text();if(raw.length>2048)return wrap(json({error:'Requête trop volumineuse.'},413));
         let body;try{body=JSON.parse(raw);}catch{return wrap(json({error:'Requête invalide.'},400));}
         const valid=await passwordMatches(body.password,env.ADMIN_PASSWORD);

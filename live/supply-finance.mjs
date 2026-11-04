@@ -22,10 +22,11 @@ function coreFinance(g,role){
  }else{
   const operation=orders.find(d=>d.from==='ops'),promise=orders.find(d=>d.from==='planning'&&d.to==='client'),q=promise?.quantity||0;
   const purchases=sum(suppliers,d=>d.quantity*d.unitPrice),service=operation?operation.quantity*operation.unitPrice+transportOption(g,operation.transport).cost:0;
-  committed=metric(q*e.sellingPrice,purchases+service,q,target);
+  committed=metric(role==='planning'?g.budget:q*e.sellingPrice,purchases+service,q,target);
   const projection=budgetProjection(g),forecastQ=g.plan?.quantity||operation?.quantity||g.demand,ordered=sum(suppliers,d=>d.quantity),missing=Math.max(0,forecastQ-ordered),forecastCost=projection.total+missing*e.referencePurchasePrice;
-  forecast=metric(forecastQ*e.sellingPrice,forecastCost,forecastQ,target);forecast.estimatedPurchases=missing>0;
-  ownCosts={sellingPrice:e.sellingPrice,referencePurchasePrice:e.referencePurchasePrice};label='Marge de la soirée';formula='(Recettes simulées des coffrets confirmés au Client − achats, préparation et transport engagés) ÷ recettes. Client et Planification suivent le même résultat global : ne pas additionner leurs marges.';atRisk=orders.some(d=>d.from!=='client'&&!workflowHealth(g,d).ok);
+  forecast=metric(role==='planning'?g.budget:forecastQ*e.sellingPrice,forecastCost,forecastQ,target);forecast.estimatedPurchases=missing>0;
+  ownCosts={sellingPrice:e.sellingPrice,referencePurchasePrice:e.referencePurchasePrice};label='Marge de la soirée';formula='(Recettes simulées des coffrets confirmés au Client − achats, préparation et transport engagés) ÷ recettes. Cet indicateur commercial reste distinct de la marge sur budget suivie par la Planification : ne pas les additionner.';atRisk=orders.some(d=>d.from!=='client'&&!workflowHealth(g,d).ok);
+  if(role==='planning'){ownCosts={clientBudget:g.budget,referencePurchasePrice:e.referencePurchasePrice};label='Marge sur budget client';formula='(Budget client − achats, préparation et transport engagés) ÷ budget client. Le budget est disponible dès le début, sans attendre la promesse finale. La prévision inclut aussi les coûts restant à engager ; un dépassement réel du budget reste visible.';}
  }
  const goalReached=committed.attained&&!atRisk&&(!['client','planning'].includes(role)||committed.quantity>=g.demand);
  return {role,label,target,committed,forecast,ownCosts,formula,atRisk,goalReached,provisional:true};
@@ -57,7 +58,7 @@ export function changeEconomics(g,b){
  const e=structuredClone(economics(g)),role=b.role,target=b.target;
  if(!FINANCE_ROLES.includes(role)||!Number.isFinite(target)||target<0||target>80||Math.abs(Math.round(target*10)-target*10)>1e-6)throw Error('Objectif : de 0 à 80 %, avec une décimale maximum.');
  e.targets[role]=target;
- const fields=['supplierA','supplierB'].includes(role)?['stockUnitCost','productionUnitCost']:role==='ops'?['preparationUnitCost']:role==='buying'?['referencePurchasePrice']:['sellingPrice'];
+ const fields=['supplierA','supplierB'].includes(role)?['stockUnitCost','productionUnitCost']:role==='ops'?['preparationUnitCost']:role==='buying'?['referencePurchasePrice']:role==='planning'?[]:['sellingPrice'];
  for(const field of fields){const value=b[field];if(!Number.isInteger(value)||value<0||value>10000)throw Error('Les valeurs unitaires doivent être comprises entre 0 et 100 €.');if(['stockUnitCost','productionUnitCost','preparationUnitCost'].includes(field))e[role][field]=value;else e[field]=value;}
  g.economics=e;
 }

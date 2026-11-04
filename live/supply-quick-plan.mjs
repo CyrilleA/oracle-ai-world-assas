@@ -19,8 +19,9 @@ export function quickPlan(g){
    const cost=purchases+q*prepPrice+t.cost,arrival=Math.max(op?.delivery||0,ready+Math.ceil(q/r.rate*60)+t.duration);
    if(cost>g.budget||arrival>g.promise.delivery||priceA>10000||priceB>10000||prepPrice>10000)continue;
    const revenue=q*e.sellingPrice,globalMargin=revenue?(revenue-cost)/revenue*100:null,ref=(a+b)*e.referencePurchasePrice,savings=ref?(ref-purchases)/ref*100:null;
-   const goals=Number(globalMargin!==null&&globalMargin>=e.targets.client)+Number(globalMargin!==null&&globalMargin>=e.targets.planning)+Number(savings!==null&&savings>=e.targets.buying);
-   solutions.push({quantity:q,supplierA:{quantity:a,unitPrice:priceA},supplierB:{quantity:b,unitPrice:priceB},preparationUnitPrice:prepPrice,transport:mode,cost,arrival,globalMargin,savings,goals});
+   const planningMargin=g.budget?(g.budget-cost)/g.budget*100:null;
+   const goals=Number(globalMargin!==null&&globalMargin>=e.targets.client)+Number(planningMargin!==null&&planningMargin>=e.targets.planning)+Number(savings!==null&&savings>=e.targets.buying);
+   solutions.push({quantity:q,supplierA:{quantity:a,unitPrice:priceA},supplierB:{quantity:b,unitPrice:priceB},preparationUnitPrice:prepPrice,transport:mode,cost,arrival,globalMargin,planningMargin,savings,goals});
   }
  }
  solutions.sort((a,b)=>b.goals-a.goals||a.cost-b.cost||a.arrival-b.arrival);

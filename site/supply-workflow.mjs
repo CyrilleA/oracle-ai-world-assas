@@ -2,7 +2,7 @@ import {productionCalculation,productionEditor} from './supply-production.mjs?v=
 import {oracleTools} from './supply-oracle-tools.mjs?v=outils-oracle-20261104';
 import {roleInstructions} from './supply-instructions.mjs?v=action-prioritaire-20261104';
 import {timerBanner,tickCountdown} from './supply-timing.mjs?v=outils-oracle-20261104';
-import {financePanel,financeImpactCard} from './supply-finance.mjs?v=rentabilite-20261104';
+import {financePanel,financeImpactCard} from './supply-finance.mjs?v=budget-planification-20261104';
 import {nextTask,proposalExplanation} from './supply-tasks.mjs?v=phases-20261104';
 export {nextTask} from './supply-tasks.mjs';
 import {constraintPanel,transportChoices} from './supply-constraints.mjs?v=capacites-20261104';

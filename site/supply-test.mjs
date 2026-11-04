@@ -1,6 +1,6 @@
 import {esc,configuration,api,load,validRoom} from './live-common.mjs';
-import {renderWorkflow} from './supply-workflow.mjs?v=volumes-20261104';
-import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=profil-test-20261104';
+import {renderWorkflow} from './supply-workflow.mjs?v=budget-planification-20261104';
+import {hostSupply,bindHostSupply} from './supply-ui.mjs?v=budget-planification-20261104';
 import {tickCountdown} from './supply-timing.mjs';
 const $=s=>document.querySelector(s),root=$('#test-player');
 let base='',key='',code=new URLSearchParams(location.hash.slice(1)).get('r')||'',role='planning',state=null,admin=null,busy=false,timer=null,lastPlayer='',lastAdmin='';

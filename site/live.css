@@ -18,3 +18,5 @@
 .host-main #create{padding:8px 12px;font-size:12px;background:transparent;color:var(--muted);border:1px solid var(--line)}
 .host-grid h1{margin:12px 0 18px}
 .host-main .status{font-size:14px;padding:10px 14px;margin-top:16px}
+
+.discovery{background:#e5eee6;border:1px solid #b4cab8;border-radius:12px;padding:28px;margin-top:28px}.discovery h2{margin:10px 0 15px}.discovery p{margin:14px 0}.discovery details{margin:20px 0}.answer-key{font-weight:650;color:var(--teal);margin-top:18px}.host-options{padding-left:28px;margin:20px 0;color:var(--muted)}.host-options li{padding:5px 0}.scm-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.student-art{width:100%;max-width:360px;height:auto;display:block;margin:18px auto 28px}#game-type{max-width:100%;font:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink)}.projection #game-type,.projection label[for=game-type]{display:none}@media(max-width:850px){.scm-summary{grid-template-columns:1fr}}

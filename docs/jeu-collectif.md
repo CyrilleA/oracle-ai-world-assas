@@ -56,3 +56,16 @@ Documentation officielle :
 - https://developers.cloudflare.com/workers/platform/pricing/
 - https://developers.cloudflare.com/durable-objects/get-started/
 - https://developers.cloudflare.com/durable-objects/api/alarms/
+
+
+## Jeu de découverte SCM : Mission 80 coffrets
+
+Après le bilan Beaujolais, le bouton **Continuer : découvrir Oracle SCM avec 80 coffrets** garde le code de séance et les participants. Les élèves conservent leur page ouverte ; aucun nouveau QR n’est nécessaire. Les votes du premier jeu sont séparés de ceux du second.
+
+Six questions à trois choix font découvrir : la composition et les variantes du coffret (PLM), le besoin net en composants (Planning), le choix fournisseur (Procurement), la préparation et la traçabilité (Manufacturing / Inventory / Quality), la promesse de commande (Order Management / Global Order Promising), puis le transport (Logistics). Quantité : **80 coffrets**.
+
+Pour chaque étape : ouvrir le vote, clore et afficher les résultats, discuter de la réponse de référence et du domaine Oracle révélé, puis passer à la suivante. Les téléphones ne reçoivent ni corrigé ni agrégats. Le bilan final réunit les six étapes. Prévoir 15 à 20 minutes.
+
+Il est aussi possible de sélectionner **Mission : 80 coffrets · Découvrir SCM** avant de créer une nouvelle séance dans la console. Le bouton de la page **Explorer SCM** ouvre cette sélection.
+
+Cas pédagogique fictif, sans réservation ni commande réelle. Les références Oracle sont affichées dans chaque débrief. Les propositions autour de l’IA sont des pistes de discussion, pas des promesses d’exécution autonome de bout en bout.

@@ -69,6 +69,29 @@ try{
  assert.equal(done.phase,'finished');assert.equal(done.history.length,3);
  assert.equal(done.history[2].received,0,'Une question sans vote ne doit pas inventer de réponses');
  await call(prefix+'/join',{body:{},status:409});
+ await call(prefix+'/join',{token:players[0].token,body:{}});
+ // Continue into SCM with the same room and participant tokens; previous votes cannot leak.
+ const scm=await call(prefix+'/control',{token:key,body:{command:'start-scm'}});
+ assert.equal(scm.game,'scm');assert.equal(scm.total,6);assert.equal(scm.participants,30);assert.equal(scm.received,0);
+ await call(prefix+'/join',{token:players[0].token,body:{}});
+ await call(prefix+'/control',{token:key,body:{command:'open'}});
+ await call(prefix+'/vote',{token:players[0].token,body:{index:0,choice:0},status:409});
+ for(let i=0;i<6;i++){
+  const student=await call(prefix+'/state',{token:players[0].token});
+  assert.equal(student.game,'scm');assert.equal(student.total,6);
+  for(const field of ['correct','domain','product','debrief','ai','source'])assert.equal(student.question[field],undefined,field+' doit rester caché avant le débrief');
+  await Promise.all(players.map((p,j)=>call(prefix+'/vote',{token:p.token,body:{game:'scm',index:i,choice:j%3}})));
+  const hidden=await call(prefix+'/results',{token:key});assert.equal(hidden.counts,null);
+  const result=await call(prefix+'/control',{token:key,body:{command:'reveal'}});
+  assert.deepEqual(result.counts,[10,10,10]);assert.ok(result.question.domain);
+  const mobile=await call(prefix+'/state',{token:players[0].token});assert.equal(mobile.question,null);assert.equal(mobile.counts,undefined);
+  if(i<5)await call(prefix+'/control',{token:key,body:{command:'next'}});
+ }
+ const scmDone=await call(prefix+'/control',{token:key,body:{command:'finish'}});
+ assert.equal(scmDone.history.length,6);assert.equal(scmDone.history[0].options.length,3);
+ const direct=await call('/api/sessions',{token:key,body:{game:'scm'},status:201});
+ const directState=await call('/api/sessions/'+direct.code+'/results',{token:key});
+ assert.equal(directState.game,'scm');assert.equal(directState.total,6);assert.equal(directState.phase,'waiting');
  // A fresh room is isolated from all the responses of the preceding session.
  const second=await call('/api/sessions',{token:key,body:{},status:201});
  const empty=await call('/api/sessions/'+second.code+'/results',{token:key});

@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { OPTIONS, QUESTIONS } from './questions.mjs';
+import { OPTIONS, quizFor } from './questions.mjs';
 import {passwordMatches,createSession,validSession,addressKey} from './auth.mjs';
 
 const json = (data, status=200) => Response.json(data, { status, headers: { 'Cache-Control':'no-store' } });
@@ -50,7 +50,9 @@ export default {
         // 40 bits of random room code. Only an authenticated teacher may create a room.
         const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),v=>alphabet[v%32]).join('');
         const room=env.ROOMS.get(env.ROOMS.idFromName(code));
-        return wrap(await room.fetch(new Request('https://room/init',{method:'POST',body:JSON.stringify({code})})));
+        const raw=await request.text();if(raw.length>2048)return wrap(json({error:'Requête trop volumineuse.'},413));
+        let setup;try{setup=JSON.parse(raw||'{}');}catch{return wrap(json({error:'Requête invalide.'},400));}
+        return wrap(await room.fetch(new Request('https://room/init',{method:'POST',body:JSON.stringify({code,game:setup.game==='scm'?'scm':'beaujolais'})})));
       }
       const match=u.pathname.match(/^\/api\/sessions\/([A-HJ-NP-Z2-9]{8})\/(state|join|vote|control|results)$/);
       if(!match || !ROOM.test(match[1])) return wrap(json({error:'Adresse de séance inconnue.'},404));
@@ -98,36 +100,43 @@ export class QuizRoom extends DurableObject {
       let room=await this.ctx.storage.get('room');
       if(op==='init') {
         if(room) return json({error:'Séance existante.'},409);
-        room={code:body.code,created:Date.now(),expires:Date.now()+TTL,phase:'waiting',question:0,players:{}};
+        room={game:body.game==='scm'?'scm':'beaujolais',code:body.code,created:Date.now(),expires:Date.now()+TTL,phase:'waiting',question:0,players:{}};
         await this.ctx.storage.put('room',room);await this.ctx.storage.setAlarm(room.expires);
         return json({code:room.code,expires:room.expires},201);
       }
       if(!room || room.expires<Date.now()) return json({error:'Cette séance a expiré ou n’existe pas.'},404);
+      let quiz=quizFor(room.game), questions=quiz.questions;
       if(op==='join') {
-        if(room.phase==='finished') return json({error:'La séance est terminée.'},409);
         const token=bearer(request);
         if(token && room.players[token]) return json({token});
+        if(room.phase==='finished') return json({error:'La séance est terminée.'},409);
         if(Object.keys(room.players).length>=80) return json({error:'La séance est complète.'},409);
         const id=crypto.randomUUID();room.players[id]={votes:{}};
         await this.ctx.storage.put('room',room);return json({token:id},201);
       }
       const player=room.players[bearer(request)];
-      if(op==='state') return json({code:room.code,phase:room.phase,index:room.question,joined:!!player,
-        question:room.phase==='voting'?{...publicQuestion(room.question),options:OPTIONS}:null,
+      if(op==='state') return json({code:room.code,phase:room.phase,index:room.question,game:quiz.id,title:quiz.title,total:questions.length,joined:!!player,
+        question:room.phase==='voting'?publicQuestion(questions[room.question]):null,
         answer:player?.votes[room.question]??null});
       if(op==='vote') {
         if(!player) return json({error:'Rejoignez la séance avant de voter.'},401);
-        if(room.phase!=='voting' || body.index!==room.question) return json({error:'Le vote pour cette question est fermé.'},409);
+        if(room.phase!=='voting' || body.index!==room.question || (body.game||'beaujolais')!==quiz.id) return json({error:'Le vote pour cette question est fermé.'},409);
         if(!Number.isInteger(body.choice)||body.choice<0||body.choice>2) return json({error:'Choix invalide.'},400);
         player.votes[room.question]=body.choice;await this.ctx.storage.put('room',room);
         return json({ok:true,choice:body.choice});
       }
       if(op==='control') {
         const command=body.command;
-        if(command==='open' && ['waiting','results'].includes(room.phase)) room.phase='voting';
+        if(command==='start-scm' && room.phase==='finished' && quiz.id==='beaujolais') {
+          room.beaujolaisHistory=questions.map((q,i)=>({...totals(room,i),title:q.title}));
+          room.game='scm';room.question=0;room.phase='waiting';
+          for(const p of Object.values(room.players))p.votes={};
+          quiz=quizFor('scm');questions=quiz.questions;
+        }
+        else if(command==='open' && ['waiting','results'].includes(room.phase)) room.phase='voting';
         else if(command==='reveal' && room.phase==='voting') room.phase='results';
-        else if(command==='next' && room.phase==='results' && room.question<QUESTIONS.length-1) {room.question++;room.phase='voting';}
-        else if(command==='finish' && room.phase==='results' && room.question===QUESTIONS.length-1) room.phase='finished';
+        else if(command==='next' && room.phase==='results' && room.question<questions.length-1) {room.question++;room.phase='voting';}
+        else if(command==='finish' && room.phase==='results' && room.question===questions.length-1) room.phase='finished';
         else return json({error:'Action impossible à cette étape.'},409);
         await this.ctx.storage.put('room',room);
       }
@@ -135,11 +144,12 @@ export class QuizRoom extends DurableObject {
         const result=totals(room,room.question);
         return json({code:room.code,phase:room.phase,index:room.question,expires:room.expires,
           ...result,counts:['results','finished'].includes(room.phase)?result.counts:null,
-          question:QUESTIONS[room.question],options:OPTIONS,
-          history:room.phase==='finished'?QUESTIONS.map((q,i)=>({...totals(room,i),title:q.title})):null});
+          game:quiz.id,title:quiz.title,total:questions.length,
+          question:questions[room.question],options:questions[room.question].options||OPTIONS,
+          history:room.phase==='finished'?questions.map((q,i)=>({...totals(room,i),title:q.title,domain:q.domain,product:q.product,correct:q.correct,options:q.options||OPTIONS})):null});
       }
       return json({error:'Action inconnue.'},404);
     });
   }
 }
-function publicQuestion(i) { const {title,context,question}=QUESTIONS[i];return {title,context,question}; }
+function publicQuestion(q) { const {title,context,question}=q;return {title,context,question,options:q.options||OPTIONS}; }

@@ -7,6 +7,7 @@ export const ROLES=[
  {id:'ops',name:'Opérations / livraison',mission:'Confirmer la préparation, la qualité et le transport ; alerter sur les risques.'}
 ];
 export const EVENTS=[
+ {id:'vehicleCapacity',label:'Transport normal : capacité limitée à 60 coffrets',target:'ops'},
  {id:'stockA',label:'Fournisseur A : perte de 10 composants en stock',target:'supplierA'},
  {id:'productionA',label:'Fournisseur A : cadence de fabrication divisée par 2',target:'supplierA'},
  {id:'packaging',label:'Opérations : 20 emballages inutilisables',target:'ops'},
@@ -21,9 +22,9 @@ export const EVENTS=[
 export const LIMITS={
  all:[{id:'budget',label:'Budget maximal',kind:'money',min:0,max:10000000},{id:'demand',label:'Quantité demandée par le client',min:1,max:120},{id:'deadline',label:'Heure promise au client',kind:'time',min:780,max:1320}],
  supplier:[{id:'stock',label:'Stock prêt à livrer',min:0,max:120},{id:'rawStock',label:'Matières premières disponibles',min:0,max:120},{id:'productionCapacity',label:'Capacité maximale de fabrication',min:0,max:120},{id:'productionRate',label:'Cadence de fabrication (unités / h)',min:1,max:240},{id:'productionStart',label:'Début de fabrication',kind:'time',min:0,max:1320},{id:'capacity',label:'Quantité totale maximale',min:0,max:120},{id:'transit',label:'Transport fournisseur (minutes)',min:0,max:360},{id:'earliest',label:'Première livraison possible',kind:'time',min:780,max:1320},{id:'minPrice',label:'Prix plancher par composant',kind:'money',min:0,max:10000}],
- ops:[{id:'packagingStock',label:'Stock d’emballages',min:0,max:240},{id:'capacity',label:'Capacité maximale de préparation',min:0,max:120},{id:'rate',label:'Cadence de préparation (coffrets / h)',min:1,max:240},{id:'travel',label:'Durée du transport normal (minutes)',min:0,max:360},{id:'quarantine',label:'Composants bloqués par la qualité',min:0,max:120},{id:'minPrice',label:'Prix plancher de préparation',kind:'money',min:0,max:10000}]
+ ops:[{id:'normalCapacity',label:'Capacité de transport normal (coffrets)',min:0,max:120},{id:'expressCapacity',label:'Capacité de transport express (coffrets)',min:0,max:120},{id:'normalCost',label:'Coût du transport normal',kind:'money',min:0,max:1000000},{id:'expressCost',label:'Coût du transport express',kind:'money',min:0,max:1000000},{id:'expressTravel',label:'Durée du transport express (minutes)',min:0,max:360},{id:'packagingStock',label:'Stock d’emballages',min:0,max:240},{id:'capacity',label:'Capacité maximale de préparation',min:0,max:120},{id:'rate',label:'Cadence de préparation (coffrets / h)',min:1,max:240},{id:'travel',label:'Durée du transport normal (minutes)',min:0,max:360},{id:'quarantine',label:'Composants bloqués par la qualité',min:0,max:120},{id:'minPrice',label:'Prix plancher de préparation',kind:'money',min:0,max:10000}]
 };
-export function limitValue(g,target,field){return target==='all'?(field==='deadline'?g.promise.delivery:g[field]):g.resources[target]?.[field];}
+export function limitValue(g,target,field){if(target==='ops'&&g.workflow===2&&g.resources.ops[field]===undefined){const normal=transportOption(g,'normal'),express=transportOption(g,'express');const values={normalCapacity:normal.capacity,expressCapacity:express.capacity,normalCost:normal.cost,expressCost:express.cost,expressTravel:express.duration};if(field in values)return values[field];}return target==='all'?(field==='deadline'?g.promise.delivery:g[field]):g.resources[target]?.[field];}
 export function applyLimit(g,{target,field,value,reason=''}){
  const schema=LIMITS[target==='all'?'all':['supplierA','supplierB'].includes(target)?'supplier':target==='ops'?'ops':'']?.find(x=>x.id===field);
  if(!schema||!Number.isInteger(value)||value<schema.min||value>schema.max)fail('Choisissez une limite autorisée et une valeur dans la plage indiquée.');
@@ -38,7 +39,7 @@ export function applyLimit(g,{target,field,value,reason=''}){
 }
 export const clock=n=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 export const money=n=>`${(n/100).toLocaleString('fr-FR',{maximumFractionDigits:2})} €`;
-export function initialGame(code,workflow=2){return {code,workflow,documents:workflow===2?[{id:"NEED-1",ref:"BES-001",type:"request",kind:"need",from:"client",to:"planning",quantity:80,delivery:1140,unitPrice:0,text:"Préparer 80 coffrets pour la soirée Beaujolais.",status:"open",at:Date.now(),round:1}]:[],game:'supply',created:Date.now(),expires:Date.now()+172800000,phase:'waiting',round:1,revision:0,players:{},messages:[],proposals:[],events:[],log:[],aiEnabled:false,aiLimit:3,aiUsed:{},aiTickets:{},drafts:{},demand:80,budget:200000,promise:{quantity:80,delivery:1140},resources:{supplierA:{capacity:60,minPrice:1000,earliest:840,stock:20,rawStock:40,productionCapacity:40,productionRate:40,productionStart:780,transit:60},supplierB:{capacity:60,minPrice:1300,earliest:900,stock:20,rawStock:40,productionCapacity:40,productionRate:20,productionStart:840,transit:60},ops:{capacity:100,minPrice:500,rate:40,travel:60,quarantine:0,packagingStock:80}},plan:null};}
+export function initialGame(code,workflow=2){return {code,workflow,documents:workflow===2?[{id:"NEED-1",ref:"BES-001",type:"request",kind:"need",from:"client",to:"planning",quantity:80,delivery:1140,unitPrice:0,text:"Préparer 80 coffrets pour la soirée Beaujolais.",status:"open",at:Date.now(),round:1}]:[],game:'supply',created:Date.now(),expires:Date.now()+172800000,phase:'waiting',round:1,revision:0,players:{},messages:[],proposals:[],events:[],log:[],aiEnabled:false,aiLimit:3,aiUsed:{},aiTickets:{},drafts:{},demand:80,budget:200000,promise:{quantity:80,delivery:1140},resources:{supplierA:{capacity:60,minPrice:1000,earliest:840,stock:20,rawStock:40,productionCapacity:40,productionRate:40,productionStart:780,transit:60},supplierB:{capacity:60,minPrice:1300,earliest:900,stock:20,rawStock:40,productionCapacity:40,productionRate:20,productionStart:840,transit:60},ops:{capacity:100,minPrice:500,rate:40,travel:60,quarantine:0,packagingStock:80,...(workflow===2?{normalCapacity:100,expressCapacity:80,normalCost:12000,expressCost:28000,expressTravel:30}:{})}},plan:null};}
 export function members(g,id){return Object.values(g.players).filter(p=>p.role===id);}
 export function captain(g,p){return p.role&&(g.captains?.[p.role]||members(g,p.role)[0]?.id)===p.id;}
 export function log(g,who,text){g.log.push({at:Date.now(),round:g.round,who,text});g.log=g.log.slice(-250);g.revision++;}
@@ -52,17 +53,30 @@ export function supplierDelivery(r,quantity){
 export function supplierStatus(g,id){const r=g.resources[id],booked=accepted(g,id).reduce((n,o)=>n+o.quantity,0),stockBooked=Math.min(booked,r.stock||0);
  return {capacity:supplierCapacity(r),booked,remaining:Math.max(0,supplierCapacity(r)-booked),stockRemaining:r.stock===undefined?null:Math.max(0,r.stock-stockBooked),productionBooked:r.stock===undefined?null:Math.max(0,booked-r.stock),delivery:supplierDelivery(r,booked)};
 }
+export function transportOption(g,mode='normal'){
+ const r=g.resources.ops,express=mode==='express';return {mode:express?'express':'normal',capacity:express?(r.expressCapacity??(g.workflow===2?80:120)):(r.normalCapacity??(g.workflow===2?100:120)),cost:express?(r.expressCost??28000):(r.normalCost??12000),duration:express?(r.expressTravel??Math.max(0,r.travel-30)):r.travel};
+}
+function operationResources(g){const normal=transportOption(g,'normal'),express=transportOption(g,'express');return {...g.resources.ops,normalCapacity:normal.capacity,expressCapacity:express.capacity,normalCost:normal.cost,expressCost:express.cost,expressTravel:express.duration,booked:accepted(g,'ops').reduce((n,d)=>n+d.quantity,0),transportOptions:[normal,express]};}
+export function budgetProjection(g){
+ const operation=accepted(g,'ops').at(-1),quantity=g.plan?.quantity||operation?.quantity||g.demand;
+ const choices=['normal','express'].map(mode=>transportOption(g,mode));
+ const mode=g.plan?.transport||operation?.transport||choices.filter(x=>x.capacity>=quantity).sort((a,b)=>a.cost-b.cost)[0]?.mode||'normal',transport=transportOption(g,mode);
+ const purchases=accepted(g).filter(d=>['supplierA','supplierB'].includes(d.from)).reduce((n,d)=>n+d.quantity*d.unitPrice,0),preparation=quantity*(operation?.unitPrice??g.resources.ops.minPrice),total=purchases+preparation+transport.cost;
+ return {purchases,preparation,transport:transport.cost,transportMode:mode,quantity,total,remaining:g.budget-total,estimated:!g.plan};
+}
 export function assess(g,plan=g.plan){
  const suppliers=['supplierA','supplierB'].flatMap(id=>{const offers=accepted(g,id);return offers.length?[{quantity:Math.min(supplierCapacity(g.resources[id]),offers.reduce((n,o)=>n+o.quantity,0)),delivery:Math.max(supplierDelivery(g.resources[id],Math.min(supplierCapacity(g.resources[id]),offers.reduce((n,o)=>n+o.quantity,0))),...offers.map(o=>o.delivery)),cost:offers.reduce((n,o)=>n+o.quantity*o.unitPrice,0)}]:[];});
  const supply=Math.max(0,suppliers.reduce((n,o)=>n+o.quantity,0)-g.resources.ops.quarantine);
  const operation=accepted(g,'ops').at(-1),q=plan?.quantity||0;
- const available=Math.min(supply,g.resources.ops.capacity,g.resources.ops.packagingStock??Infinity,operation?.quantity||0);
+ const shipping=transportOption(g,plan?.transport||operation?.transport||'normal');
+ const available=Math.min(supply,g.resources.ops.capacity,g.resources.ops.packagingStock??Infinity,operation?.quantity||0,shipping.capacity);
  const ready=suppliers.length?Math.max(...suppliers.map(o=>o.delivery))+Math.ceil(q/g.resources.ops.rate*60):null;
- const arrival=!plan||ready===null?null:Math.max(operation?.delivery||0,ready+Math.max(0,g.resources.ops.travel-(plan?.transport==='express'?30:0)));
- const cost=suppliers.reduce((n,o)=>n+o.cost,0)+q*(operation?.unitPrice||0)+(plan?12000+(plan.transport==='express'?16000:0):0);
+ const arrival=!plan||ready===null?null:Math.max(operation?.delivery||0,ready+shipping.duration);
+ const cost=suppliers.reduce((n,o)=>n+o.cost,0)+q*(operation?.unitPrice||0)+(plan?shipping.cost:0);
  const reasons=[];if(!q)reasons.push('La planification n’a pas encore confirmé de plan.');
  if(q>available)reasons.push('Les engagements, stocks et capacités ne couvrent pas la quantité du plan.');
  if(q>(g.resources.ops.packagingStock??Infinity))reasons.push('Le stock d’emballages ne couvre pas la quantité du plan.');
+ if(q>shipping.capacity)reasons.push('La capacité du transport choisi ne couvre pas la quantité du plan.');
  if(cost>g.budget)reasons.push('Le budget est dépassé.');
  if(arrival===null||arrival>g.promise.delivery)reasons.push('L’arrivée avant l’heure promise n’est pas assurée.');
  if(q<g.promise.quantity)reasons.push('La quantité promise au client n’est pas couverte.');
@@ -74,7 +88,7 @@ export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA
  if(r.stock===undefined)return `Capacité totale : ${r.capacity} composants. Prix minimum : ${money(r.minPrice)} par composant. Livraison au plus tôt : ${clock(r.earliest)}. Offres acceptées : ${s.booked} composants. Ces limites sont confidentielles à votre équipe.`;
  return `Stock prêt à livrer, avant réservations : ${r.stock} composants ; encore non engagé : ${s.stockRemaining}. Matières premières : ${r.rawStock}, soit au plus ${Math.min(r.rawStock,r.productionCapacity)} composants à fabriquer. Capacité de fabrication : ${r.productionCapacity} composants ; cadence : ${r.productionRate}/h à partir de ${clock(r.productionStart)}. Transport : ${r.transit} min ; première livraison possible : ${clock(r.earliest)}. Pour un volume dépassant le stock, fabrication avant transport. Engagements : ${s.booked}, dont ${s.productionBooked} à fabriquer. Quantité supplémentaire possible : ${s.remaining}. Prix minimum : ${money(r.minPrice)} par composant. Ces limites sont confidentielles à votre équipe.`;
  }
- if(role==='ops')return `Capacité : ${r.capacity} coffrets.${r.packagingStock===undefined?'':` Stock d’emballages : ${r.packagingStock} ; un emballage nécessaire par coffret.`} Cadence : ${r.rate} coffrets/heure après réception de tous les composants. Prix de préparation minimum : ${money(r.minPrice)} par coffret. Transport normal : ${r.travel} min et 120 €. Express : ${Math.max(0,r.travel-30)} min et 280 €. Composants bloqués par la qualité : ${r.quarantine}. Communiquez les impacts aux autres équipes.`;
+ if(role==='ops')return `Capacité : ${r.capacity} coffrets.${r.packagingStock===undefined?'':` Stock d’emballages : ${r.packagingStock} ; un emballage nécessaire par coffret.`} Cadence : ${r.rate} coffrets/heure après réception de tous les composants. Prix de préparation minimum : ${money(r.minPrice)} par coffret. Transport normal : ${transportOption(g,'normal').duration} min, ${money(transportOption(g,'normal').cost)}, au plus ${transportOption(g,'normal').capacity} coffrets. Express : ${transportOption(g,'express').duration} min, ${money(transportOption(g,'express').cost)}, au plus ${transportOption(g,'express').capacity} coffrets. Composants bloqués par la qualité : ${r.quarantine}. Communiquez les impacts aux autres équipes.`;
  if(role==='buying')return 'Un composant acheté permet de préparer un coffret. Consultez les deux fournisseurs sur le prix, le stock disponible et les délais des quantités à fabriquer. Un stock déjà engagé ne peut pas être vendu une seconde fois. Vous seul acceptez leurs offres. Les achats acceptés consomment le budget même si tous les composants ne sont pas utilisés.';
  if(role==='planning')return 'Demandez aux achats leurs approvisionnements et aux opérations une offre de préparation/livraison. Acceptez l’offre Opérations, proposez une promesse au Client, puis confirmez un plan. Le site vérifie le coût et les capacités réels.';
  return `Besoin actuel : ${g.demand} coffrets. Budget total maximal : ${money(g.budget)}. Promesse actuelle : ${g.promise.quantity} coffrets avant ${clock(g.promise.delivery)}. Vous seul acceptez une nouvelle promesse proposée par la planification.`;}
@@ -84,8 +98,9 @@ export function view(g,p,admin=false,ready=false){
  roles:ROLES.map(r=>({...r,members:members(g,r.id).map((x,i)=>({id:x.id,captain:(g.captains?.[r.id]||members(g,r.id)[0]?.id)===x.id})),count:members(g,r.id).length})),participants:Object.keys(g.players).length,
  demand:g.demand,budget:g.budget,promise:g.promise,plan:g.plan,assessment:assess(g),aiEnabled:g.aiEnabled,aiReady:ready,aiLimit:g.aiLimit,aiUsed:admin?g.aiUsed:(g.aiUsed[role]||0),
  messages:g.messages.filter(m=>admin||m.from===role||m.to===role),proposals:g.proposals.filter(m=>admin||m.from===role),events:g.events.filter(e=>admin||e.target==='all'||e.target===role),
- ...(admin?{limitSchema:LIMITS,resources:g.resources,resourceBriefs:Object.fromEntries(['supplierA','supplierB','ops'].map(id=>[id,teamBrief(g,id)])),log:g.log,aiCounts:Object.fromEntries(ROLES.map(r=>[r.id,g.log.filter(e=>e.who===r.id&&e.kind==='ai').length])),aiDrafts:Object.entries(g.drafts).map(([player,d])=>({playerId:player,role:Object.values(g.players).find(p=>p.id===player)?.role||'',text:d.text,at:d.at}))}:{}),
- inventory:['supplierA','supplierB'].includes(role)&&g.resources[role].stock!==undefined?{...g.resources[role],...supplierStatus(g,role)}:role==='ops'&&g.resources.ops.packagingStock!==undefined?{packagingStock:g.resources.ops.packagingStock}:null,
+ ...(admin?{budgetDetails:budgetProjection(g),limitSchema:LIMITS,resources:{...g.resources,ops:g.workflow===2?operationResources(g):g.resources.ops},resourceBriefs:Object.fromEntries(['supplierA','supplierB','ops'].map(id=>[id,teamBrief(g,id)])),log:g.log,aiCounts:Object.fromEntries(ROLES.map(r=>[r.id,g.log.filter(e=>e.who===r.id&&e.kind==='ai').length])),aiDrafts:Object.entries(g.drafts).map(([player,d])=>({playerId:player,role:Object.values(g.players).find(p=>p.id===player)?.role||'',text:d.text,at:d.at}))}:{}),
+ spending:role==='buying'?{available:Math.max(0,budgetProjection(g).remaining),overBudget:budgetProjection(g).remaining<0}:null,
+ inventory:['supplierA','supplierB'].includes(role)&&g.resources[role].stock!==undefined?{...g.resources[role],...supplierStatus(g,role)}:role==='ops'&&g.resources.ops.packagingStock!==undefined?operationResources(g):null,
  draft:p?g.drafts[p.id]||null:null};
 }
 function fail(message,status=400){const e=Error(message);e.status=status;throw e;}
@@ -118,7 +133,8 @@ export function applyEvent(g,id,text,target){const e=EVENTS.find(x=>x.id===id);i
  if(id==='shortB')g.resources.supplierB.capacity=30;
  if(id==='quality')g.resources.ops.quarantine+=20;
  if(id==='capacity')g.resources.ops.capacity=60;
- if(id==='road')g.resources.ops.travel+=90;
+ if(id==='vehicleCapacity')g.resources.ops.normalCapacity=60;
+ if(id==='road'){g.resources.ops.travel+=90;if(g.resources.ops.expressTravel!==undefined)g.resources.ops.expressTravel+=90;}
  if(id==='demand')g.demand+=10;
  const t=e?.target||target||'all';if(t!=='all'&&!ROLES.some(r=>r.id===t))fail('Équipe cible inconnue.');
  const label=e?.label||String(text||'').trim();if(!label||label.length>600)fail('Décrivez la contrainte en 600 caractères maximum.');
@@ -186,16 +202,17 @@ function workflowOfferReport(original,m,existing=false){
   if(q>available)errors.push('Le stock libre, les matières et la capacité de fabrication ne couvrent pas cette quantité.');
   if(earliest!==null&&m.delivery<earliest)errors.push('La fabrication et le transport ne permettent pas cette heure de livraison.');
   if(!existing&&m.unitPrice<r.minPrice)errors.push('Le prix proposé est inférieur au prix plancher de votre équipe.');
-  cost=workflowSources(g).cost+(existing?0:q*m.unitPrice);
+  cost=budgetProjection(g).total+(existing?0:q*m.unitPrice);
  }else if(m.from==='buying'){
-  const source=workflowSources(g);available=source.quantity;earliest=available>=q?source.delivery:null;cost=source.cost;
+  const source=workflowSources(g);available=source.quantity;earliest=available>=q?source.delivery:null;cost=budgetProjection(g).total;
   if(q>available)errors.push('Les commandes fournisseurs confirmées ne couvrent pas la quantité annoncée.');
   if(earliest!==null&&m.delivery<earliest)errors.push('Les fournisseurs confirmés ne livrent pas assez tôt.');
  }else if(m.from==='ops'){
-  const source=workflowSources(g),sourcing=accepted(g,'buying').at(-1);available=Math.min(source.quantity,sourcing?.quantity||0,r.capacity,r.packagingStock??Infinity);
+  const source=workflowSources(g),sourcing=accepted(g,'buying').at(-1),shipping=transportOption(g,m.transport);available=Math.min(source.quantity,sourcing?.quantity||0,r.capacity,r.packagingStock??Infinity,shipping.capacity);
+  if(q>shipping.capacity)errors.push('La capacité du transport choisi ne permet pas cette quantité.');
   if(!sourcing||!workflowHealth(g,sourcing).ok)errors.push('Attendez la confirmation des approvisionnements par les Achats et la Planification.');
-  cost=source.cost+q*m.unitPrice+(m.transport==='express'?28000:12000);
-  earliest=q<=available?source.delivery+Math.ceil(q/r.rate*60)+Math.max(0,r.travel-(m.transport==='express'?30:0)):null;
+  cost=source.cost+q*m.unitPrice+shipping.cost;
+  earliest=q<=available?source.delivery+Math.ceil(q/r.rate*60)+shipping.duration:null;
   if(q>available)errors.push('Les commandes fournisseurs, les emballages et la capacité de préparation ne couvrent pas cette quantité.');
   if(earliest!==null&&m.delivery<earliest)errors.push('La réception des composants, la préparation et le transport ne permettent pas cette heure.');
   if(!existing&&m.unitPrice<r.minPrice)errors.push('Le prix de préparation est inférieur au prix plancher de votre équipe.');

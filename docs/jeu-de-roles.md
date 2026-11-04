@@ -1,3 +1,13 @@
+# Contraintes visibles et budget global
+
+Les moyens de chaque équipe sont visibles sur son écran principal et au-dessus de son formulaire de réponse. Les fournisseurs voient le stock libre, la fabrication libre, la cadence, le maximum supplémentaire et les réservations existantes. Une révision rappelle les quantités déjà réservées pour cet engagement. Les Opérations voient les composants confirmés, les emballages et la capacité de préparation ; le choix de transport affiche directement capacité, durée et prix.
+
+Transport normal : 100 coffrets, 60 minutes, 120 €. Express : 80 coffrets, 30 minutes, 280 €. Ce sont des capacités totales pour le plan du jeu, pas une simulation de trajets multiples. Les capacités, durées et coûts des deux options sont modifiables par l’animateur. Les anciennes séances structurées bénéficient des mêmes valeurs par défaut, sans supprimer les engagements. Un événement peut ramener le transport normal à 60 coffrets ; changer de mode ou réviser la promesse devient alors nécessaire. Un retard routier ajoute 90 minutes aux deux options.
+
+Le budget maximal couvre composants, préparation et transport. Avant que le plan soit finalisé, la préparation est provisionnée au prix minimum de l’équipe Opérations ; le transport est estimé à l’option la moins chère pouvant couvrir la quantité. Un engagement Opérations confirmé ou un plan précise ensuite les valeurs retenues. Les offres fournisseurs et commandes sont contrôlées sur ce coût global prévu, et non sur les seuls produits. Côté Achats, seul le budget disponible est affiché, sans ventilation de la provision. L’animateur dispose du détail achats / préparation / transport pour le débrief. Une estimation n’est pas une garantie que toutes les offres futures, notamment leurs marges, tiendront le budget.
+
+La Planification voit un diagramme Demande / Approvisionnements confirmés, la quantité restant à couvrir, les engagements à revalider et l’avancement préparation-livraison / promesse client. Il suit les engagements, pas des réceptions ou livraisons physiques. Les stocks privés des fournisseurs ne sont pas révélés aux autres équipes.
+
 # Attentes entre équipes
 
 Lorsqu’aucune action n’est possible, l’écran nomme l’équipe attendue, l’information nécessaire et la prochaine étape. Après une offre envoyée, il attend la décision du destinataire ; après une demande, il attend la réponse de l’équipe sollicitée. Les attentes sont actualisées par la synchronisation automatique du jeu, sans recharger la page. Un engagement déjà confirmé affiche une étape terminée plutôt qu’une attente sans objet.

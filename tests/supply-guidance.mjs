@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {nextTask} from '../site/supply-workflow.mjs';
+import {nextTask,supplierOffers} from '../site/supply-workflow.mjs';
 const roles=['client','planning','buying','supplierA','supplierB','ops'].map(id=>({id,name:id}));
 const base={code:'TESTTEST',roles,phase:'running',round:1,isCaptain:true,documents:[],proposals:[],demand:80};
 const req=(id,from,to,quantity=80)=>({id,type:'request',from,to,quantity,delivery:1140,status:'open'});
@@ -32,3 +32,9 @@ assert.deepEqual(nextTask({...earlyOps,documents:[req('closed','planning','ops')
 assert.deepEqual(nextTask({...base,role:'supplierA',isCaptain:false,proposals:[{status:'proposed'}]}).waitingOn,['captain']);
 assert.deepEqual(nextTask({...base,role:'buying',phase:'paused'}).waitingOn,['animateur']);assert.equal(nextTask({...base,role:'client',phase:'finished'}).complete,true);
 console.log('Guidage mobile : une action suivante cohérente pour chaque équipe, commandes partielles, attente, décisions capitaine, révisions amont et pauses vérifiées.');
+
+// Les Achats comparent les deux fournisseurs sans se voir imposer la première offre.
+const comparisonState={...base,role:'buying',documents:[req('a','buying','supplierA',40),req('b','buying','supplierB',40),offer('a1','supplierA','buying','pending',{quantity:60,requestId:'a'}),offer('b1','supplierB','buying','pending',{quantity:40,unitPrice:1300,requestId:'b'}),offer('old','supplierA','buying','superseded',{quantity:20}),offer('private','supplierA','planning','pending')]};
+const comparison=supplierOffers(comparisonState);assert.match(comparison,/data-wf-accept="a1"/);assert.match(comparison,/data-wf-accept="b1"/);assert.match(comparison,/60 unités/);assert.match(comparison,/13,00/);assert.match(comparison,/Offres précédentes, refusées ou remplacées \(1\)/);assert.doesNotMatch(comparison,/data-wf-accept="old"|data-wf-accept="private"/);assert.equal(supplierOffers({...comparisonState,role:'supplierA'}),'');
+assert.match(supplierOffers({...comparisonState,documents:[req('a','buying','supplierA')]}),/En attente de sa proposition/);assert.match(supplierOffers({...comparisonState,documents:[]}),/pas encore été consulté/);assert.doesNotMatch(supplierOffers({...comparisonState,round:2}),/data-wf-accept=/);
+console.log('Comparaison Achats : toutes les offres A/B, choix indépendant, historique, attente, expiration et confidentialité vérifiés.');

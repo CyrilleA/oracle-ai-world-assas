@@ -190,3 +190,5 @@ Le créneau supplémentaire s’applique aux nouvelles offres, sans déplacer la
 
 ### Modifier les volumes proposés
 Les fournisseurs et les Achats disposent d’un bouton « Modifier le volume proposé » sur leur action principale et leurs offres en attente. Une nouvelle offre remplace la précédente ; celle-ci ne peut plus être acceptée. Pour un engagement confirmé, la révision ne remplace l’engagement qu’après acceptation du destinataire. Les quantités peuvent être augmentées ou réduites, jusqu’à 120, avec contrôle des ressources, délais et budget. Une quantité supérieure à la demande est signalée aux deux équipes et reste soumise à acceptation. Les Achats ne peuvent annoncer que les quantités réellement confirmées par les fournisseurs.
+
+Les Achats voient les offres des deux fournisseurs côte à côte dans leur action principale, avant les outils Oracle. Chaque offre indique son volume, son prix unitaire et total, son délai et son statut, avec son propre bouton de commande. Les offres remplacées, refusées ou libérées restent accessibles dans l’historique comparatif. Sur mobile, les colonnes se placent l’une sous l’autre.

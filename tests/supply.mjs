@@ -8,7 +8,7 @@ const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:root+'
 async function call(url,{token='',body,status=200,method}={}){const r=await mf.dispatchFetch('https://quiz.test'+url,{method:method||(body?'POST':'GET'),headers:{Origin:'https://cyrillea.github.io','Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});const data=await r.json();assert.equal(r.status,status,`${url} : ${JSON.stringify(data)}`);return data;}
 try{
  // Vérifier l'effet industriel, y compris sur des engagements existants.
- const g=initialGame('TESTTEST'),a=g.resources.supplierA,b=g.resources.supplierB;
+ const g=initialGame('TESTTEST',1),a=g.resources.supplierA,b=g.resources.supplierB;
  assert.equal(supplierDelivery(a,20),840);assert.equal(supplierDelivery(a,60),900);
  assert.equal(supplierDelivery(b,20),900);assert.equal(supplierDelivery(b,60),1020);
  b.rawStock=10;assert.equal(supplierCapacity(b),30);
@@ -22,11 +22,11 @@ try{
  applyEvent(g,'stockA');assert.equal(supplierCapacity(a),50);assert.equal(assess(g).available,70);assert.equal(assess(g).valid,false);
  assert.equal(view(g,{id:'P1',role:'supplierA'}).inventory.stockRemaining,0);
  // Compatibilité : aucune nouvelle restriction ajoutée aux anciennes séances.
- const legacy=initialGame('OLDOLD12');legacy.resources.supplierA={capacity:60,minPrice:1000,earliest:840};
+ const legacy=initialGame('OLDOLD12',1);legacy.resources.supplierA={capacity:60,minPrice:1000,earliest:840};
  assert.equal(supplierCapacity(legacy.resources.supplierA),60);assert.equal(supplierDelivery(legacy.resources.supplierA,60),840);
  const {token:admin}=await call('/api/login',{body:{password:'TEST-only-12345'}});
  await call('/api/supply-sessions',{body:{},status:401});
- const {code}=await call('/api/supply-sessions',{token:admin,body:{},status:201}),path='/api/supply-sessions/'+code;
+ const {code}=await call('/api/supply-sessions',{token:admin,body:{workflow:1},status:201}),path='/api/supply-sessions/'+code;
  const host=(body)=>call(path+'/control',{token:admin,body});
  await host({command:'limit',target:'ops',field:'packagingStock',value:81,reason:'Réglage avant le début'});await host({command:'limit',target:'ops',field:'packagingStock',value:80});
  const players=await Promise.all(Array.from({length:30},()=>call(path+'/join',{body:{},status:201})));

@@ -1,3 +1,31 @@
+# Parcours structuré : demandes, devis et engagements
+
+Les nouvelles séances du jeu de rôles utilisent ce parcours. Les séances déjà ouvertes gardent leur mode historique. Le jeu simule la planification et les engagements : un statut confirmé réserve des ressources dans la simulation, il ne représente pas une fabrication ou une livraison physique exécutée.
+
+1. Le Client dispose du besoin initial BES-001 : 80 coffrets avant 19 h. La Planification le reçoit automatiquement.
+2. La Planification crée une demande aux Achats : quantité de composants et heure souhaitée. Elle peut aussi consulter les Opérations pour la préparation et le transport.
+3. Les Achats créent des consultations fournisseurs liées au besoin reçu. Chaque demande indique une quantité et une heure ; elle ne réserve rien.
+4. Chaque fournisseur ouvre la consultation, vérifie la faisabilité et propose une offre. Le contrôle indique le maximum réalisable à l’heure demandée et, si la capacité le permet, l’heure possible pour la totalité. Une quantité partielle ou une livraison plus tardive peut être proposée explicitement. Les Achats choisissent de commander ; le serveur revérifie le prix, le stock libre, les matières, la cadence, le transport, les réservations et le budget avant de créer l’engagement ENG-xxx. Les offres en attente ne réservent rien.
+5. Les Achats confirment leur approvisionnement à la Planification en répondant à sa demande : cette quantité doit être couverte par les commandes fournisseurs acceptées. Ce transfert interne n’ajoute aucun coût d’achat.
+6. Les Opérations répondent à la demande de service. Leur offre s’appuie sur les composants commandés, leur heure d’arrivée, les emballages, la cadence, le prix de préparation et le transport choisi. La Planification accepte cet engagement.
+7. La Planification confirme un plan compatible avec les engagements Achats et Opérations. Elle répond ensuite au besoin client avec une quantité et une heure réalisables. Le Client confirme cette promesse. Les contrôles sont effectués à la proposition et à l’acceptation.
+
+Les membres peuvent préparer des demandes ou offres en propositions internes. Le capitaine les confirme ; les contrôles sont réexécutés lors de cette confirmation. Les commentaires libres et l’aide IA restent disponibles dans un espace secondaire. Un commentaire ne peut pas créer une commande ni modifier une promesse.
+
+## Imprévus et révisions
+
+Les contraintes administrateur restent actives. Les engagements devenus irréalisables affichent « à risque », avec leur cause. Ils ne sont jamais effacés automatiquement. Un destinataire peut demander une révision ; l’émetteur peut aussi proposer une nouvelle version. L’ancienne commande continue de réserver les ressources jusqu’à l’acceptation de la remplaçante. Cette acceptation retire atomiquement l’ancienne réservation et applique la nouvelle, sans compter deux fois le coût.
+
+Si une commande amont est remplacée ou libérée, les engagements qui s’appuyaient sur elle demandent une reconfirmation. Les équipes doivent faire remonter les nouvelles conditions jusqu’au client. Les offres non acceptées expirent au changement de tour. Les demandes et les engagements confirmés restent.
+
+## Exemple pour tester seul
+
+Planification → Achats : 80 composants à 15 h. Achats → A : 60 à 14 h ; Achats → B : 20 à 15 h. A constate que seuls 20 sont réalisables à 14 h et propose 60 à 15 h pour 10 €/unité ; B propose 20 à 15 h pour 13 €/unité. Les Achats acceptent les deux, puis proposent à la Planification l’engagement de 80 à 15 h. Opérations propose 80 préparations à 5 €/unité, livraison à 18 h, transport normal. La Planification accepte, confirme le plan puis propose 80 avant 19 h au Client. Coût : 1 380 €.
+
+Réduire ensuite la cadence A à 20/h : son engagement à 15 h devient à risque. Faire réviser A à 16 h, puis reconfirmer Achats à 16 h et Opérations à 19 h, confirmer le plan et reconfirmer la promesse client à 19 h. Le coût reste 1 380 €.
+
+---
+
 # Mission Supply Chain : tenir la promesse client
 
 La rubrique 7 ouvre la console animateur avec « Mission Supply Chain · Jeu de rôles ». Créer une séance affiche le QR du jeu mobile indépendant `supply.html#r=CODE`. Les autres jeux et leurs séances restent séparés.

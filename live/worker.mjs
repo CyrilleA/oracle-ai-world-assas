@@ -48,10 +48,11 @@ export default {
       if(u.pathname==='/api/admin' && request.method==='GET') return wrap(admin?json({ok:true}):json({error:'Connectez-vous pour ouvrir la console.'},401));
       if(u.pathname==='/api/supply-sessions'&&request.method==='POST'){
         if(!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
+        const raw=await request.text();if(raw.length>2048)return wrap(json({error:'Requête trop volumineuse.'},413));let body;try{body=JSON.parse(raw||'{}');}catch{return wrap(json({error:'Requête invalide.'},400));}
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),n=>alphabet[n%32]).join('');
-        return wrap(await env.SUPPLY.get(env.SUPPLY.idFromName(code)).fetch(new Request('https://supply/init',{method:'POST',body:JSON.stringify({code})})));
+        return wrap(await env.SUPPLY.get(env.SUPPLY.idFromName(code)).fetch(new Request('https://supply/init',{method:'POST',body:JSON.stringify({code,workflow:body.workflow===1?1:2})})));
       }
-      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist)$/);
+      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist|request|quote|check|renegotiate|approve)$/);
       if(supply){
         const [,code,op]=supply;if(['results','control'].includes(op)&&!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
         const room=env.SUPPLY.get(env.SUPPLY.idFromName(code));

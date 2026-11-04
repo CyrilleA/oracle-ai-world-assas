@@ -38,11 +38,11 @@ export function applyLimit(g,{target,field,value,reason=''}){
 }
 export const clock=n=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 export const money=n=>`${(n/100).toLocaleString('fr-FR',{maximumFractionDigits:2})} €`;
-export function initialGame(code){return {code,game:'supply',created:Date.now(),expires:Date.now()+172800000,phase:'waiting',round:1,revision:0,players:{},messages:[],proposals:[],events:[],log:[],aiEnabled:false,aiLimit:3,aiUsed:{},aiTickets:{},drafts:{},demand:80,budget:200000,promise:{quantity:80,delivery:1140},resources:{supplierA:{capacity:60,minPrice:1000,earliest:840,stock:20,rawStock:40,productionCapacity:40,productionRate:40,productionStart:780,transit:60},supplierB:{capacity:60,minPrice:1300,earliest:900,stock:20,rawStock:40,productionCapacity:40,productionRate:20,productionStart:840,transit:60},ops:{capacity:100,minPrice:500,rate:40,travel:60,quarantine:0,packagingStock:80}},plan:null};}
+export function initialGame(code,workflow=2){return {code,workflow,documents:workflow===2?[{id:"NEED-1",ref:"BES-001",type:"request",kind:"need",from:"client",to:"planning",quantity:80,delivery:1140,unitPrice:0,text:"Préparer 80 coffrets pour la soirée Beaujolais.",status:"open",at:Date.now(),round:1}]:[],game:'supply',created:Date.now(),expires:Date.now()+172800000,phase:'waiting',round:1,revision:0,players:{},messages:[],proposals:[],events:[],log:[],aiEnabled:false,aiLimit:3,aiUsed:{},aiTickets:{},drafts:{},demand:80,budget:200000,promise:{quantity:80,delivery:1140},resources:{supplierA:{capacity:60,minPrice:1000,earliest:840,stock:20,rawStock:40,productionCapacity:40,productionRate:40,productionStart:780,transit:60},supplierB:{capacity:60,minPrice:1300,earliest:900,stock:20,rawStock:40,productionCapacity:40,productionRate:20,productionStart:840,transit:60},ops:{capacity:100,minPrice:500,rate:40,travel:60,quarantine:0,packagingStock:80}},plan:null};}
 export function members(g,id){return Object.values(g.players).filter(p=>p.role===id);}
 export function captain(g,p){return p.role&&(g.captains?.[p.role]||members(g,p.role)[0]?.id)===p.id;}
 export function log(g,who,text){g.log.push({at:Date.now(),round:g.round,who,text});g.log=g.log.slice(-250);g.revision++;}
-export function accepted(g,from){return g.messages.filter(m=>m.type==='offer'&&m.status==='accepted'&&(!from||m.from===from));}
+export function accepted(g,from){return (g.workflow===2?g.documents:g.messages).filter(m=>m.type==='offer'&&m.status==='accepted'&&(!from||m.from===from));}
 // Les séances déjà ouvertes gardent leurs règles ; les nouvelles portent le détail industriel.
 export function supplierCapacity(r){return r.stock===undefined?r.capacity:Math.min(r.capacity,r.stock+Math.min(r.rawStock,r.productionCapacity));}
 export function supplierDelivery(r,quantity){
@@ -66,6 +66,7 @@ export function assess(g,plan=g.plan){
  if(cost>g.budget)reasons.push('Le budget est dépassé.');
  if(arrival===null||arrival>g.promise.delivery)reasons.push('L’arrivée avant l’heure promise n’est pas assurée.');
  if(q<g.promise.quantity)reasons.push('La quantité promise au client n’est pas couverte.');
+ if(g.workflow===2&&q){const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);if(!sourcing||sourcing.quantity<q)reasons.push('L’engagement Achats ne couvre pas le plan.');if(sourcing&&sourcing.delivery>Math.min(operation?.delivery||1320,g.promise.delivery))reasons.push('L’engagement Achats est trop tardif.');if(sourcing&&!workflowHealth(g,sourcing).ok)reasons.push('L’engagement Achats est à risque : faites-le réviser.');if(operation&&!workflowHealth(g,operation).ok)reasons.push('L’engagement Opérations est à risque : faites-le réviser.');if(operation&&operation.transport!==plan.transport)reasons.push('Le transport diffère de l’engagement Opérations.');if([sourcing,operation].filter(Boolean).some(d=>d.dependencyIds?.some(id=>!accepted(g).some(a=>a.id===id))))reasons.push('Un engagement amont a changé : faites reconfirmer les engagements dépendants.');}
  return {quantity:q,available,arrival,cost,budget:g.budget,valid:reasons.length===0,reasons,originalDemand:g.demand,promise:g.promise,coverage:Math.min(q,available)};
 }
 export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA'||role==='supplierB'){
@@ -79,7 +80,7 @@ export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA
  return `Besoin actuel : ${g.demand} coffrets. Budget total maximal : ${money(g.budget)}. Promesse actuelle : ${g.promise.quantity} coffrets avant ${clock(g.promise.delivery)}. Vous seul acceptez une nouvelle promesse proposée par la planification.`;}
 export function view(g,p,admin=false,ready=false){
  const role=p?.role||'',team=ROLES.find(r=>r.id===role);
- return {game:'supply',code:g.code,phase:g.phase,round:g.round,revision:g.revision,expires:g.expires,joined:!!p,playerId:p?.id,role,isCaptain:p?captain(g,p):false,team,brief:role?teamBrief(g,role):null,
+ return {game:'supply',workflow:g.workflow||1,documents:g.workflow===2?g.documents.filter(d=>admin||d.from===role||d.to===role).map(d=>({...d,requestRef:g.documents.find(x=>x.id===d.requestId)?.ref,parentRef:g.documents.find(x=>x.id===d.parentId)?.ref,replacesRef:g.documents.find(x=>x.id===d.replacesId)?.orderRef,health:d.type==='offer'&&d.status==='accepted'?workflowHealth(g,d):null})):[],code:g.code,phase:g.phase,round:g.round,revision:g.revision,expires:g.expires,joined:!!p,playerId:p?.id,role,isCaptain:p?captain(g,p):false,team,brief:role?teamBrief(g,role):null,
  roles:ROLES.map(r=>({...r,members:members(g,r.id).map((x,i)=>({id:x.id,captain:(g.captains?.[r.id]||members(g,r.id)[0]?.id)===x.id})),count:members(g,r.id).length})),participants:Object.keys(g.players).length,
  demand:g.demand,budget:g.budget,promise:g.promise,plan:g.plan,assessment:assess(g),aiEnabled:g.aiEnabled,aiReady:ready,aiLimit:g.aiLimit,aiUsed:admin?g.aiUsed:(g.aiUsed[role]||0),
  messages:g.messages.filter(m=>admin||m.from===role||m.to===role),proposals:g.proposals.filter(m=>admin||m.from===role),events:g.events.filter(e=>admin||e.target==='all'||e.target===role),
@@ -126,6 +127,19 @@ export function applyEvent(g,id,text,target){const e=EVENTS.find(x=>x.id===id);i
 export function act(g,p,op,b){
  if(!p?.role)fail('Choisissez votre équipe avant de jouer.',403);
  if(g.phase!=='running')fail('L’animateur doit ouvrir ou reprendre le jeu.',409);
+ if(g.workflow===2&&op==='proposal'&&['request','quote'].includes(b.documentAction)){
+ if(g.proposals.length>=180)fail('Limite de propositions atteinte.',409);
+ const payload={...b};delete payload.proposalId;
+ if(b.documentAction==='quote')workflowCandidate(g,p,b);
+ g.proposals.push({id:crypto.randomUUID(),from:p.role,to:b.to||g.documents.find(d=>d.id===b.requestId)?.from,author:p.id,type:'note',text:String(b.text||'Proposition structurée'),documentAction:b.documentAction,payload,at:Date.now(),round:g.round,status:'proposed'});log(g,p.role,`Proposition structurée interne de ${p.id}`);return;
+ }
+ if(g.workflow===2&&op==='approve'){
+ if(!captain(g,p))fail('Le capitaine confirme les engagements.',403);
+ const proposal=g.proposals.find(d=>d.id===b.id&&d.from===p.role&&d.status==='proposed');if(!proposal?.documentAction)fail('Proposition indisponible.',409);
+ workflowAct(g,p,proposal.documentAction,proposal.payload);proposal.status='sent';return;
+ }
+ if(g.workflow===2&&['request','quote','check','accept','reject','renegotiate','plan'].includes(op))return workflowAct(g,p,op,b);
+ if(g.workflow===2&&['message','proposal'].includes(op)&&b.type!=='note')fail('Utilisez une demande structurée ou une réponse à une demande.');
  if(op==='proposal'){if(g.proposals.length>=180)fail('Limite de propositions atteinte.',409);const m=messageFields(g,p,b);g.proposals.push({...m,author:p.id,status:'proposed'});log(g,p.role,`Proposition interne du participant ${p.id}`);return;}
  if(!captain(g,p))fail('Le capitaine confirme les messages et les engagements de l’équipe.',403);
  if(op==='message'){
@@ -149,6 +163,123 @@ export function act(g,p,op,b){
   if(p.role!=='planning')fail('La planification confirme le plan.',403);
   if(!Number.isInteger(b.quantity)||b.quantity<1||b.quantity>120||!['normal','express'].includes(b.transport))fail('Plan invalide.');
   g.plan={quantity:b.quantity,transport:b.transport,at:Date.now(),round:g.round};log(g,p.role,`Plan confirmé : ${b.quantity} coffrets, transport ${b.transport}`);return;
+ }
+ fail('Action inconnue.');
+}
+
+// Parcours structuré : une demande n'engage rien ; seule l'acceptation réserve.
+const REQUEST_ROUTES={client:['planning'],planning:['buying','ops'],buying:['supplierA','supplierB']};
+const supplierRole=r=>['supplierA','supplierB'].includes(r);
+function workflowDoc(g,b){return g.documents.find(d=>d.id===b.id);}
+function workflowSources(g){
+ const rows=['supplierA','supplierB'].map(id=>{const orders=accepted(g,id);return {quantity:Math.min(supplierCapacity(g.resources[id]),orders.reduce((n,d)=>n+d.quantity,0)),delivery:orders.length?Math.max(supplierDelivery(g.resources[id],orders.reduce((n,d)=>n+d.quantity,0)),...orders.map(d=>d.delivery)):0,cost:orders.reduce((n,d)=>n+d.quantity*d.unitPrice,0)};});
+ return {quantity:Math.max(0,rows.reduce((n,r)=>n+r.quantity,0)-g.resources.ops.quarantine),delivery:Math.max(...rows.map(r=>r.delivery)),cost:rows.reduce((n,r)=>n+r.cost,0)};
+}
+function workflowBase(g,m){return m.replacesId?{...g,documents:g.documents.filter(d=>d.id!==m.replacesId)}:g;}
+function workflowDependencies(g,role){return accepted(g).filter(d=>role==='buying'||role==='ops'?supplierRole(d.from):role==='planning'?['buying','ops'].includes(d.from):false).map(d=>d.id);}
+function workflowOfferReport(original,m,existing=false){
+ const g=workflowBase(original,m),errors=[],warnings=[],q=m.quantity,r=g.resources[m.from];let available=0,earliest=null,cost=null;
+ if(supplierRole(m.from)){
+  const earlier=accepted(g,m.from).filter(d=>d.id!==m.id&&(!existing||((d.acceptedAt||d.at)<(m.acceptedAt||m.at)||((d.acceptedAt||d.at)===(m.acceptedAt||m.at)&&String(d.orderRef)<String(m.orderRef)))));
+  const booked=earlier.reduce((n,d)=>n+d.quantity,0);available=Math.max(0,supplierCapacity(r)-booked);earliest=q<=available?supplierDelivery(r,booked+q):null;
+  if(q>available)errors.push('Le stock libre, les matières et la capacité de fabrication ne couvrent pas cette quantité.');
+  if(earliest!==null&&m.delivery<earliest)errors.push('La fabrication et le transport ne permettent pas cette heure de livraison.');
+  if(!existing&&m.unitPrice<r.minPrice)errors.push('Le prix proposé est inférieur au prix plancher de votre équipe.');
+  cost=workflowSources(g).cost+(existing?0:q*m.unitPrice);
+ }else if(m.from==='buying'){
+  const source=workflowSources(g);available=source.quantity;earliest=available>=q?source.delivery:null;cost=source.cost;
+  if(q>available)errors.push('Les commandes fournisseurs confirmées ne couvrent pas la quantité annoncée.');
+  if(earliest!==null&&m.delivery<earliest)errors.push('Les fournisseurs confirmés ne livrent pas assez tôt.');
+ }else if(m.from==='ops'){
+  const source=workflowSources(g);available=Math.min(source.quantity,r.capacity,r.packagingStock??Infinity);cost=source.cost+q*m.unitPrice+(m.transport==='express'?28000:12000);
+  earliest=q<=available?source.delivery+Math.ceil(q/r.rate*60)+Math.max(0,r.travel-(m.transport==='express'?30:0)):null;
+  if(q>available)errors.push('Les commandes fournisseurs, les emballages et la capacité de préparation ne couvrent pas cette quantité.');
+  if(earliest!==null&&m.delivery<earliest)errors.push('La réception des composants, la préparation et le transport ne permettent pas cette heure.');
+  if(!existing&&m.unitPrice<r.minPrice)errors.push('Le prix de préparation est inférieur au prix plancher de votre équipe.');
+ }else if(m.from==='planning'){
+  const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);available=Math.min(sourcing?.quantity||0,operation?.quantity||0);
+  if(!g.plan||g.plan.quantity!==q)errors.push('Confirmez d’abord un plan de cette quantité, appuyé sur les engagements Achats et Opérations.');
+  if(g.plan){const a=assess({...g,promise:{quantity:q,delivery:m.delivery}});earliest=a.arrival;cost=a.cost;errors.push(...a.reasons);}
+ }
+ if(cost!==null&&cost>g.budget)errors.push('Le budget maximal serait dépassé.');
+ if(existing&&m.dependencyIds?.some(id=>!accepted(g).some(d=>d.id===id)))errors.push('Un engagement amont a été remplacé ou libéré : une reconfirmation est nécessaire.');
+ const request=g.documents.find(d=>d.id===m.requestId);if(request&&m.delivery>request.delivery)warnings.push('L’heure proposée dépasse l’heure demandée : le destinataire devra accepter cette alternative.');
+ if(request&&q<request.quantity)warnings.push('Réponse partielle : le reste du besoin devra être couvert par une autre offre.');
+ return {ok:errors.length===0,reasons:[...new Set(errors)],warnings,available,earliest,cost};
+}
+export function workflowHealth(g,m){const r=workflowOfferReport(g,m,true);return {ok:r.ok,reasons:r.reasons};}
+function workflowCandidate(g,p,b){
+ const request=g.documents.find(d=>d.id===b.requestId&&d.type==='request'&&d.to===p.role);
+ if(!request)fail('Sélectionnez une demande reçue par votre équipe.');
+ const replacesId=String(b.replacesId||request.replacesId||'');
+ if(replacesId){const old=g.documents.find(d=>d.id===replacesId&&d.type==='offer'&&d.status==='accepted'&&d.from===p.role&&d.to===request.from);if(!old)fail('L’engagement à réviser n’est plus actif.');}
+ if(!replacesId&&['rejected','closed'].includes(request.status))fail('Cette demande est clôturée ou refusée.');
+ const quantity=Number(b.quantity),delivery=Number(b.delivery),unitPrice=['buying','planning'].includes(p.role)?0:Number(b.unitPrice);
+ if(!Number.isInteger(quantity)||quantity<1||quantity>request.quantity||!Number.isInteger(unitPrice)||unitPrice<0||unitPrice>10000||!Number.isInteger(delivery)||delivery<780||delivery>1320)fail('Vérifiez la quantité (dans le besoin demandé), le prix et l’heure (13 h à 22 h).');
+ const transport=b.transport==='express'?'express':'normal';
+ return {type:'offer',from:p.role,to:request.from,requestId:request.id,replacesId:replacesId||null,quantity,unitPrice,delivery,transport,text:String(b.text||'').trim().slice(0,1200)};
+}
+export function workflowCheck(g,p,b){
+ if(g.workflow!==2)fail('Créez une nouvelle séance pour utiliser le parcours structuré.');
+ const m=workflowCandidate(g,p,b),base=workflowBase(g,m),report=workflowOfferReport(g,m),request=g.documents.find(d=>d.id===m.requestId);
+ let feasibleQuantity=0;for(let quantity=1;quantity<=request.quantity;quantity++){if(workflowOfferReport(g,{...m,quantity,delivery:request.delivery}).ok)feasibleQuantity=quantity;}
+ let fullEarliest=null;if(supplierRole(p.role)){const booked=accepted(base,p.role).reduce((n,d)=>n+d.quantity,0),r=base.resources[p.role];if(booked+request.quantity<=supplierCapacity(r))fullEarliest=supplierDelivery(r,booked+request.quantity);}
+ else {const full=workflowOfferReport(g,{...m,quantity:request.quantity});if(full.available>=request.quantity)fullEarliest=full.earliest;}
+ return {...report,requestedQuantity:request.quantity,requestedDelivery:request.delivery,feasibleQuantityAtRequestedTime:feasibleQuantity,earliestForFullQuantity:fullEarliest};
+}
+function appendWorkflow(g,d){d.id=crypto.randomUUID();d.ref=(d.type==='request'?'DEM':'DEV')+'-'+String(g.documents.length+1).padStart(3,'0');d.at=Date.now();d.round=g.round;g.documents.push(d);return d;}
+function workflowRequest(g,p,b){
+ if(!(REQUEST_ROUTES[p.role]||[]).includes(b.to))fail('Cette demande doit suivre le circuit Client → Planification → Achats → Fournisseurs, ou Planification → Opérations.');
+ const quantity=Number(b.quantity),delivery=Number(b.delivery);if(!Number.isInteger(quantity)||quantity<1||quantity>120||!Number.isInteger(delivery)||delivery<780||delivery>1320)fail('Indiquez une quantité de 1 à 120 et une heure entre 13 h et 22 h.');
+ const parent=g.documents.find(d=>d.id===b.parentId&&d.type==='request'&&(d.to===p.role||d.id==='NEED-1'));
+ if(p.role!=='client'&&!parent)fail('Reliez cette demande au besoin client ou à une demande reçue.');
+ const d=appendWorkflow(g,{type:'request',kind:p.role==='client'?'need':b.to==='ops'?'service':'sourcing',from:p.role,to:b.to,parentId:parent?.id||null,quantity,delivery,unitPrice:0,text:String(b.text||'').trim().slice(0,1200),status:'open',replacesId:b.replacesId||null});
+ if(p.role==='client'){g.demand=quantity;}
+ log(g,p.role,`${d.ref} · Demande de ${quantity} unités avant ${clock(delivery)} → ${ROLES.find(r=>r.id===b.to)?.name}`);return d;
+}
+export function workflowAct(g,p,op,b){
+ if(!captain(g,p))fail('Le capitaine confirme les demandes et les engagements de l’équipe.',403);
+ if(['request','quote','renegotiate'].includes(op)&&g.documents.length>=240)fail('Limite de documents atteinte.',409);
+ if(op==='request'){if(b.replacesId)fail('Utilisez l’action Renégocier sur l’engagement concerné.');workflowRequest(g,p,b);return;}
+ if(op==='quote'){
+  const m=workflowCandidate(g,p,b),report=workflowOfferReport(g,m);if(!report.ok)fail(report.reasons.join(' '),409);
+  if(!m.replacesId){const covered=accepted(g).filter(d=>d.requestId===m.requestId).reduce((n,d)=>n+d.quantity,0);if(covered+m.quantity>g.documents.find(d=>d.id===m.requestId).quantity)fail('Les réponses déjà commandées couvrent cette demande.',409);}
+  m.status='pending';m.dependencyIds=workflowDependencies(workflowBase(g,m),p.role);appendWorkflow(g,m);log(g,p.role,`${m.ref} · Proposition de ${m.quantity} unités à ${clock(m.delivery)}${m.replacesId?' · révision d’un engagement':''}`);return;
+ }
+ const m=workflowDoc(g,b);
+ if(op==='renegotiate'){
+  if(!m||m.type!=='offer'||m.status!=='accepted'||m.to!==p.role)fail('Choisissez un engagement accepté par votre équipe.');
+  const parent=g.documents.find(d=>d.id===m.requestId);
+  workflowRequest(g,p,{to:m.from,quantity:b.quantity??m.quantity,delivery:b.delivery??m.delivery,parentId:parent?.parentId||'NEED-1',replacesId:m.id,text:b.text||'Merci de proposer une révision de cet engagement.'});return;
+ }
+ if(op==='reject'){
+  if(!m||m.to!==p.role||!['pending','open'].includes(m.status))fail('Document déjà traité ou inaccessible.',409);
+  m.status='rejected';log(g,p.role,`${m.ref} · ${m.type==='offer'?'Offre':'Demande'} refusée`);return;
+ }
+ if(op==='accept'){
+  if(!m||m.type!=='offer'||m.to!==p.role||m.status!=='pending')fail('Offre déjà traitée ou inaccessible.',409);
+  if(m.round!==g.round)fail('Offre expirée : demandez une nouvelle proposition pour ce tour.',409);
+  const originalRequest=g.documents.find(d=>d.id===m.requestId);
+  if(!originalRequest||originalRequest.status==='rejected')fail('La demande a été refusée.',409);
+  if(m.replacesId&&!g.documents.some(d=>d.id===m.replacesId&&d.status==='accepted'))fail('L’engagement remplacé n’est plus actif.',409);
+  const base=workflowBase(g,m),report=workflowOfferReport(g,m);if(!report.ok)fail('Engagement impossible : '+report.reasons.join(' '),409);
+  const covered=accepted(base).filter(d=>d.requestId===m.requestId).reduce((n,d)=>n+d.quantity,0);if(covered+m.quantity>originalRequest.quantity)fail('La demande est déjà couverte par un autre engagement.',409);
+  if(['buying','ops','planning'].includes(m.from)&&accepted(base,m.from).length)fail('Un engagement est déjà actif pour cette équipe. Utilisez une révision pour le remplacer.',409);
+  if(m.replacesId){g.documents.find(d=>d.id===m.replacesId).status='superseded';}
+  m.status='accepted';m.acceptedAt=Date.now();m.orderRef='ENG-'+String(g.documents.filter(d=>d.acceptedAt).length).padStart(3,'0');m.dependencyIds=workflowDependencies(g,m.from);
+  originalRequest.status=covered+m.quantity===originalRequest.quantity?'closed':'partial';
+  if(m.from==='planning')g.promise={quantity:m.quantity,delivery:m.delivery};
+  log(g,p.role,`${m.orderRef} · ${m.ref} accepté : ${m.quantity} unités à ${clock(m.delivery)} · ressources réservées`);return;
+ }
+ if(op==='plan'){
+  if(p.role!=='planning')fail('La planification confirme le plan.',403);
+  if(!Number.isInteger(b.quantity)||b.quantity<1||b.quantity>120||!['normal','express'].includes(b.transport))fail('Plan invalide.');
+  const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);
+  if(!sourcing||!operation)fail('Faites confirmer les engagements Achats et Opérations avant le plan.',409);
+  if(operation.transport!==b.transport)fail('Le transport doit correspondre à l’engagement Opérations. Demandez une révision.',409);
+  const candidate={quantity:b.quantity,transport:b.transport},result=assess({...g,promise:{quantity:b.quantity,delivery:1320}},candidate);
+  if(!result.valid)fail('Plan impossible : '+result.reasons.join(' '),409);
+  g.plan={...candidate,at:Date.now(),round:g.round};log(g,p.role,`Plan confirmé : ${b.quantity} coffrets, transport ${b.transport}`);return;
  }
  fail('Action inconnue.');
 }

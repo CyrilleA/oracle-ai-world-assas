@@ -29,3 +29,5 @@
 @media(max-width:360px){.supply-inventory{grid-template-columns:1fr}}
 
 .supply-admin-nav{margin:24px 0}.supply-activity-feed{max-height:560px;overflow:auto;overscroll-behavior:contain;margin-top:16px}.supply-activity-item{border-top:1px solid #dce2dc;padding:16px 4px}.supply-activity-item>small{color:#63706a}.supply-activity-item .supply-message{margin-bottom:0}#supply-limits,#supply-activity,#supply-teams{scroll-margin-top:24px}
+
+.workflow-risk{border:2px solid #be4939}.workflow-document>small{display:block;margin:8px 0;color:#63706a}#wf-editor{scroll-margin-top:20px}#wf-check-result .status{margin:16px 0}.workflow-step{padding:12px;background:#edf0e7;border-radius:8px}

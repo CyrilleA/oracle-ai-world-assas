@@ -22,7 +22,7 @@ async function refresh(force=false){if(!code||busy||!key)return;try{
  if(!nextAdmin.testMode)throw Error('Cette séance n’est pas une partie test privée. Ouvrez un nouveau profil test.');
  admin=nextAdmin;state=nextState;controls();
  const ps=JSON.stringify(state);if(force||ps!==lastPlayer){lastPlayer=ps;player();}
- const as=JSON.stringify(admin);if((force||as!==lastAdmin)&&!document.activeElement?.closest('#test-admin form')){lastAdmin=as;const open=[...$('#test-admin').querySelectorAll('details[id][open]')].map(x=>x.id);$('#test-admin').innerHTML=hostSupply(admin);for(const id of open){const d=$('#test-admin').querySelector('#'+id);if(d)d.open=true;}bindHostSupply($('#test-admin'),control,admin);}
+ const as=JSON.stringify(admin);if(force||as!==lastAdmin&&!document.activeElement?.closest('#test-admin form')){lastAdmin=as;const open=[...$('#test-admin').querySelectorAll('details[id][open]')].map(x=>x.id);$('#test-admin').innerHTML=hostSupply(admin);for(const id of open){const d=$('#test-admin').querySelector('#'+id);if(d)d.open=true;}bindHostSupply($('#test-admin'),control,admin);}
  $('#test-network').textContent=`Test privé ${code} · ${admin.phase==='waiting'?'Prêt à démarrer':admin.phase==='running'?'En jeu':admin.phase==='paused'?'En pause':'Terminé'}`;error();
  }catch(e){error(e.message);if(e.status===401)loginRequired();}}
 async function choose(next){if(busy||role===next)return;role=next;lastPlayer='';controls();await refresh(true);root.scrollIntoView({behavior:'smooth',block:'start'});}

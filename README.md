@@ -1,6 +1,6 @@
 # Oracle AI World et SCM — ASSAS
 
-Portail pédagogique pour animer la matinée du 5 novembre 2026. Il présente une frise depuis le lancement de ChatGPT, l’Agentic Enterprise, les annonces Fusion, les domaines SCM, des démonstrations et un atelier de décision.
+Portail pédagogique pour animer la matinée du 5 novembre 2026. Il présente une frise depuis le lancement de ChatGPT, l’Agentic Enterprise, les annonces Fusion, les domaines SCM, un jeu de rôles et une conclusion « Et vous, demain ? » sur les métiers possibles de l’Agentic Enterprise.
 
 ## Accéder au portail
 
@@ -19,7 +19,7 @@ Le fichier `site/index.html` fonctionne aussi directement dans un navigateur. So
 - **Flèches gauche/droite** : changer d’espace.
 - **Échap** : fermer une fenêtre ou les notes.
 - Les schémas d’Agentic Enterprise s’agrandissent au clic.
-- Le simulateur TECHINDUS conserve les choix sur l’appareil utilisé, si le navigateur autorise le stockage local.
+- « Et vous, demain ? » présente les cinq rôles cités dans Agentic Enterprise (p. 8), avec leurs compétences et des exemples reliés au jeu des 80 coffrets.
 
 Les notes, scénarios et corrigés de la présentation font partie du site public. Le QR code mène à une page de jeu distincte (`jeu.html`), sans navigation vers la présentation. La console (`animateur.html`) crée une séance et projette les résultats après clôture du vote. Ses commandes et agrégats sont protégés par un mot de passe et une session vérifiés sur le serveur Cloudflare.
 
@@ -46,7 +46,7 @@ docs/hebergement.md            Hébergement gratuit et évolution vers les jeux 
 
 ## Sources et portée
 
-Les liens vers les annonces publiques OpenAI et Oracle figurent dans le portail. Les schémas Agentic Enterprise présentent un cadre conceptuel inspiré du document fourni par Cyrille Ancelot. Les chiffres de l’atelier sont fictifs. Le portail n’est pas une interface Oracle connectée.
+Les liens vers les annonces publiques OpenAI et Oracle figurent dans le portail. Les schémas Agentic Enterprise présentent un cadre conceptuel inspiré du document fourni par Cyrille Ancelot. Les scénarios du jeu sont fictifs. Les missions associées aux cinq métiers sont des adaptations pédagogiques des pistes prospectives du document ; elles ne constituent pas une annonce de postes. Le portail n’est pas une interface Oracle connectée.
 
 Les PDF sources et les fichiers de travail locaux ne font pas partie de ce dépôt. Les visuels et contenus tiers restent soumis aux droits de leurs auteurs. Aucune licence de réutilisation générale n’est accordée par ce dépôt.
 

@@ -68,18 +68,13 @@ assert.ok(nodes.get('#main').innerHTML.includes('AI Agent Studio'));
 assert.ok(nodes.get('#main').innerHTML.includes('Oracle Fusion Cloud SCM'),'Le socle reste visible sous la couche');
 run("action('outcome-replay')");check('state.outcomeLayer===true','Rejouer conserve la couche');
 run("action('outcome-toggle')");assert.ok(!nodes.get('#main').innerHTML.includes('id="outcome-layer"'));
-run("navigate('atelier');action('workshop-reset')");
-check('totals().available===600&&totals().margin===52000&&!totals().valid','Stock initial : résultat et priorité B');
-run("action('apply-reference')");
-check('totals().available===1000&&totals().margin===75500&&totals().valid','Tous secours :75 500€');
-run("action('shock');propose()");
-check('totals().available===900&&totals().margin===72000&&allocation.c===150&&totals().valid','Rebondissement :72 000€');
-run('allocation.qualified=false;propose()');
-check('totals().available===800&&totals().margin===67000&&allocation.c===50&&totals().valid','Sans substitution :67 000€');
-run('allocation.a=400;allocation.b=350;allocation.c=250;updateWorkshop()');
-assert.equal(nodes.get('#margin').textContent,'Plan irréalisable');
-check("JSON.parse(localStorage.getItem('assas-portal-allocation-v1')).qualified===false",'Sauvegarde des choix');
-for(const a of ['help','sources','transverse','assumptions','correction','pause','fin']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'),a+' : fenêtre nommée');run('closeModal()');}
+run("navigate('atelier')");
+assert.ok(nodes.get('#main').innerHTML.includes('Et vous, demain ?'));
+assert.ok(!nodes.get('#main').innerHTML.includes('TECHINDUS'));
+check('FUTURE_ROLES.length===5','Les cinq rôles cités dans le PDF');
+for(let i=0;i<5;i++){run(`state.career=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('FUTURE_ROLES[state.career].original')));assert.ok(nodes.get('#main').innerHTML.includes(run('FUTURE_ROLES[state.career].human')));}
+assert.ok(nodes.get('#main').innerHTML.includes('p. 8–9'));
+for(const a of ['help','sources','transverse','pause','fin']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'),a+' : fenêtre nommée');run('closeModal()');}
 for(let i=0;i<3;i++){run(`demoModal(${i},false)`);for(let s=0;s<3;s++){run(`state.demoStep=${s};drawDemo()`);assert.ok(nodes.get('#modal').innerHTML.includes(run('DEMOS[state.demo].explain[state.demoStep]')));}run(`demoModal(${i},true)`);assert.ok(!nodes.get('#modal').innerHTML.includes('<iframe'),'Vidéo chargée uniquement au clic');run("action('video-load')");assert.ok(nodes.get('.video-player').innerHTML.includes('youtube-nocookie.com'));run('closeModal()');}
 check('Object.keys(SOURCES).length===25','25 références officielles');
 run("navigate('frise');state.timelineStep=0;render()");
@@ -103,5 +98,5 @@ assert.ok(!/__(HERO|SOURCES)__/.test(html),'Aucun emplacement incomplet');
 assert.equal((html.match(/<script>/g)||[]).length,1,'Un script embarqué');
 assert.ok(!/<script[^>]*src=|<link[^>]*href=/.test(html),'Aucune dépendance réseau au chargement');
 const durations=[15,40,25,15,30,50,5];assert.equal(durations.reduce((a,b)=>a+b,0),180);
-console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,simulateur,25 sources et180 minutes.');
+console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,5 métiers issus du PDF,25 sources et180 minutes.');
 console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu dans un navigateur.');

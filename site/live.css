@@ -33,3 +33,7 @@
 .workflow-risk{border:2px solid #be4939}.workflow-document>small{display:block;margin:8px 0;color:#63706a}#wf-editor{scroll-margin-top:20px}#wf-check-result .status{margin:16px 0}.workflow-step{padding:12px;background:#edf0e7;border-radius:8px}
 
 .supply-confirm[hidden]{display:none!important}
+
+.workflow-goal{font-size:17px;color:#63706a}.workflow-focus{border-top:4px solid #306661}.workflow-focus h2{font-size:clamp(25px,4vw,34px);margin:12px 0 16px}.workflow-focus p{font-size:18px;line-height:1.5}.workflow-main-action{display:block;width:100%;margin:24px 0 12px;padding:17px}.workflow-focus>.secondary{margin-bottom:12px;width:100%}.workflow-focus .text-btn{border:0;background:none;color:#306661;text-decoration:underline;padding:10px;font:inherit}.workflow-check-ok{background:#e8f0e5;color:#243735;padding:14px;border-radius:8px;margin:18px 0;font-weight:600}.workflow-check-ok p{font-size:14px;font-weight:400;margin-top:8px}#wf-more>h3{font-size:20px;margin-top:24px}#wf-more>summary,#wf-chat>summary{font-size:16px;font-weight:600;cursor:pointer}#wf-editor .actions{margin-bottom:0}#wf-editor .actions .primary{flex:1}#wf-focus .eyebrow{font-size:11px}
+
+.workflow-role-choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.workflow-role-choices .card{padding:18px}.workflow-role-choices strong{font-size:19px}.workflow-role-choices span{font-size:13px;color:#63706a}@media(max-width:600px){.workflow-role-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.workflow-role-choices .card{padding:16px}.workflow-role-choices strong{font-size:17px}}

@@ -1,3 +1,11 @@
+# Interface élèves simplifiée
+
+L’écran principal indique l’action suivante pour l’équipe : consulter les Achats, demander un prix, répondre, commander ou confirmer la promesse. Le destinataire et le besoin lié sont choisis automatiquement ; quantité et heure sont préremplies. Les ressources, références et historiques restent disponibles sous « Mes ressources et l’historique ».
+
+Pour une réponse, la vérification se lance automatiquement. Si la proposition est impossible, des boutons permettent de choisir une quantité partielle ou un délai réalisable. Il n’y a plus de bouton « Vérifier » ni de case à cocher avant une offre ; « Envoyer ma proposition » est disponible quand les valeurs ont été vérifiées. Le serveur conserve ses contrôles lors de l’envoi et de l’acceptation. Préparer la promesse client confirme le plan interne compatible, sans accepter de proposition à la place du client.
+
+La première consultation Achats répartit par défaut le besoin en deux : pour 80, 40 chez A et 40 chez B. Ce sont des valeurs proposées, modifiables, sans supposer les capacités privées des fournisseurs. La Planification demande les composants avec une marge pour préparer et transporter les coffrets. L’aide IA et les messages restent accessibles dans un volet secondaire.
+
 # Parcours structuré : demandes, devis et engagements
 
 Les nouvelles séances du jeu de rôles utilisent ce parcours. Les séances déjà ouvertes gardent leur mode historique. Le jeu simule la planification et les engagements : un statut confirmé réserve des ressources dans la simulation, il ne représente pas une fabrication ou une livraison physique exécutée.

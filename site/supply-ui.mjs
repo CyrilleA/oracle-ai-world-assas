@@ -39,11 +39,11 @@ export function bindHostSupply(container,send,s){
  container.querySelector('#activity-role').onchange=e=>{activityRole=e.target.value;renderFeed();};
  container.querySelector('#activity-kind').onchange=e=>{activityKind=e.target.value;renderFeed();};
  const form=container.querySelector('#supply-limit');if(form){
- const target=form.elements.target,field=form.elements.field,input=form.elements.value;
+ const target=form.querySelector('[name=target]'),field=form.querySelector('[name=field]'),input=form.querySelector('[name=value]');
  const updateValue=()=>{const meta=s.limitSchema[limitGroup(target.value)].find(x=>x.id===field.value),n=currentLimit(s,target.value,field.value);input.type=meta.kind==='time'?'time':'number';input.step=meta.kind==='money'?'0.01':meta.kind==='time'?'60':'1';input.min=meta.kind==='time'?time(meta.min):meta.kind==='money'?meta.min/100:meta.min;input.max=meta.kind==='time'?time(meta.max):meta.kind==='money'?meta.max/100:meta.max;input.value=n===undefined?'':meta.kind==='time'?time(n):meta.kind==='money'?n/100:n;container.querySelector('#limit-current').textContent=n===undefined?'Cette limite nécessite une nouvelle séance.':'Valeur actuelle : '+(meta.kind==='time'?time(n):meta.kind==='money'?euro(n):n);};
  const updateFields=()=>{field.innerHTML=s.limitSchema[limitGroup(target.value)].map(x=>`<option value="${x.id}">${esc(x.label)}</option>`).join('');updateValue();};
  target.onchange=updateFields;field.onchange=updateValue;updateFields();
- form.onsubmit=e=>{e.preventDefault();const meta=s.limitSchema[limitGroup(target.value)].find(x=>x.id===field.value),parts=input.value.split(':').map(Number);const value=meta.kind==='time'?parts[0]*60+parts[1]:meta.kind==='money'?Math.round(Number(input.value)*100):Number(input.value);send({command:'limit',target:target.value,field:field.value,value,reason:form.elements.reason.value});};
+ form.onsubmit=e=>{e.preventDefault();const meta=s.limitSchema[limitGroup(target.value)].find(x=>x.id===field.value),parts=input.value.split(':').map(Number);const value=meta.kind==='time'?parts[0]*60+parts[1]:meta.kind==='money'?Math.round(Number(input.value)*100):Number(input.value);send({command:'limit',target:target.value,field:field.value,value,reason:form.querySelector('[name=reason]').value});};
  }
  }
 container.querySelectorAll('[data-supply-command]').forEach(b=>b.onclick=()=>send({command:b.dataset.supplyCommand}));container.querySelectorAll('[data-captain]').forEach(b=>b.onclick=()=>send({command:'captain',playerId:b.dataset.captain,role:b.dataset.team}));container.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>send({command:'release',id:b.dataset.release}));

@@ -45,6 +45,17 @@ for(const route of ['accueil','frise','enterprise','ai-world','scm','deleguer','
 }
 run("navigate('ai-world')");
 for(let i=0;i<5;i++){run(`state.feature=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('FEATURES[state.feature].title')));}
+// Régression : les chapitres YouTube ne sont pas les repères du contenu réel.
+check('FEATURE_VIDEOS[0].start===1917&&FEATURE_VIDEOS[0].end===1985','Companion : définition à 31:57');
+check('FEATURE_VIDEOS[1].start===140&&FEATURE_VIDEOS[1].end===203','Applications agentiques : définition à 2:20');
+check('FEATURE_VIDEOS[2].start===558&&FEATURE_VIDEOS[2].end===690','Claw : architecture et autorité à 9:18');
+check('FEATURE_VIDEOS[3].start===2187&&FEATURE_VIDEOS[3].end===2347','Agentic Home : démo complète à 36:27');
+for(let i=0;i<5;i++){
+ run(`state.feature=${i};render();action('feature-video-load')`);
+ const src=nodes.get('#feature-player').innerHTML;
+ assert.ok(src.includes('start='+run('FEATURE_VIDEOS[state.feature].start')));
+ const end=run('FEATURE_VIDEOS[state.feature].end');if(end)assert.ok(src.includes('end='+end));
+}
 run("navigate('scm')");
 for(let i=0;i<6;i++){run(`state.module=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('MODULES[state.module].question')));}
 run("navigate('deleguer')");

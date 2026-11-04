@@ -92,7 +92,6 @@ for n,card in enumerate(cards):
 
 def page(canvas,doc):
     w,h=doc.pagesize
-    canvas.setFillColor(colors.HexColor(RED));canvas.setFont('Arial-Bold',13);canvas.drawString(42,h-30,'ORACLE')
     canvas.setStrokeColor(colors.HexColor('#d9dfd6'));canvas.line(42,36,w-42,36)
     canvas.setFillColor(colors.HexColor('#62716b'));canvas.setFont('Arial',8)
     canvas.drawString(42,23,'ASSAS · Oracle AI World · 5 novembre 2026')

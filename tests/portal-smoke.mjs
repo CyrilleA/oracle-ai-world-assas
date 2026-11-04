@@ -22,6 +22,9 @@ vm.runInContext(code,context);
 const run=s=>vm.runInContext(s,context);
 const check=(s,message)=>assert.ok(run(s),message);
 run("navigate('accueil');action('party-reset')");
+assert.ok(nodes.get('#main').innerHTML.includes('Merci pour votre présentation.'));
+assert.ok(!nodes.get('#main').innerHTML.includes('La promotion vous confie'));
+run("action('party-intro')");
 assert.ok(nodes.get('#main').innerHTML.includes('la soirée Beaujolais'));
 run("action('party-start')");
 for(let step=1;step<=3;step++){

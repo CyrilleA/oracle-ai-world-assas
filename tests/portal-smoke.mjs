@@ -97,6 +97,11 @@ check('Object.values(SOURCES).every(s=>new URL(s[1]).protocol==="https:")','Sour
 assert.ok(!/__(HERO|SOURCES)__/.test(html),'Aucun emplacement incomplet');
 assert.equal((html.match(/<script>/g)||[]).length,1,'Un script embarqué');
 assert.ok(!/<script[^>]*src=|<link[^>]*href=/.test(html),'Aucune dépendance réseau au chargement');
-const durations=[15,40,25,15,30,50,5];assert.equal(durations.reduce((a,b)=>a+b,0),180);
+check('MORNING_AGENDA[0].start===540&&MORNING_AGENDA.at(-1).end===720','De 9 h à 12 h');
+check('MORNING_AGENDA.every((r,i)=>r.end>r.start&&(i===0||r.start===MORNING_AGENDA[i-1].end))','Agenda sans trous ni chevauchements');
+check('MORNING_AGENDA.reduce((n,r)=>n+r.end-r.start,0)===180','180 minutes dans le véritable agenda');
+check("MORNING_AGENDA.some(r=>r.route==='ai-world')&&MORNING_AGENDA.some(r=>r.route==='enterprise')",'Annonces et Agentic Enterprise présentes');
+check("MORNING_AGENDA.find(r=>r.route==='demos').end-MORNING_AGENDA.find(r=>r.route==='demos').start===55",'55 minutes pour humain, IA et bilan');
+run("navigate('parcours')");assert.ok(nodes.get('#main').innerHTML.includes('Et vous, demain ?'));run("action('pause')");assert.ok(nodes.get('#modal').innerHTML.includes('Reprise à 10 h 45'));run('closeModal()');
 console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,5 métiers issus du PDF,25 sources et180 minutes.');
 console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu dans un navigateur.');

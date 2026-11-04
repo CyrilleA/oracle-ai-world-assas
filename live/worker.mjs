@@ -50,11 +50,11 @@ export default {
         if(!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
         const raw=await request.text();if(raw.length>2048)return wrap(json({error:'Requête trop volumineuse.'},413));let body;try{body=JSON.parse(raw||'{}');}catch{return wrap(json({error:'Requête invalide.'},400));}
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),n=>alphabet[n%32]).join('');
-        return wrap(await env.SUPPLY.get(env.SUPPLY.idFromName(code)).fetch(new Request('https://supply/init',{method:'POST',body:JSON.stringify({code,workflow:body.workflow===1?1:2})})));
+        return wrap(await env.SUPPLY.get(env.SUPPLY.idFromName(code)).fetch(new Request('https://supply/init',{method:'POST',body:JSON.stringify({code,workflow:body.workflow===1&&body.testMode!==true?1:2,testMode:body.testMode===true})})));
       }
-      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist|request|quote|check|renegotiate|approve|auto-confirm)$/);
+      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist|request|quote|check|renegotiate|approve|auto-confirm|test-state|test-act)$/);
       if(supply){
-        const [,code,op]=supply;if(['results','control'].includes(op)&&!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
+        const [,code,op]=supply;if(['results','control','test-state','test-act'].includes(op)&&!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
         const room=env.SUPPLY.get(env.SUPPLY.idFromName(code));
         const raw=request.method==='POST'?await request.text():undefined;if(raw&&raw.length>4096)return wrap(json({error:'Message trop volumineux.'},413));
         const headers={'Content-Type':'application/json',Authorization:request.headers.get('Authorization')||''};

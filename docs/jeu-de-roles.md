@@ -165,3 +165,14 @@ Chaque fiche de rôle contient « Du jeu à Oracle SCM » : noms des application
 - Client : Order Management et Global Order Promising sont présentés du côté de l’entreprise qui sert le client ; le client externe reçoit la promesse et le suivi via le canal choisi, sans supposer qu’il accède aux écrans internes.
 
 Les liens de chaque fiche renvoient aux pages Oracle et à la documentation produit vérifiées le 4 novembre 2026. Il s’agit d’une correspondance pédagogique, sans connexion du jeu à une instance Oracle. La couche IA est présentée comme une aide à la préparation et à la coordination, distincte des applications qui portent les transactions.
+
+
+## Profil test : répondre avec les six rôles sur un seul ordinateur
+
+Depuis l’accès animateur, ouvrir « Profil test · choisir les rôles et répondre ». Le profil utilise la connexion animateur existante : aucun compte supplémentaire et aucun mot de passe à créer. Une partie privée indépendante est créée avec six capitaines simulés. Elle n’ajoute aucun joueur et n’écrit aucune réponse dans la partie des élèves.
+
+Cliquer « Démarrer le test », puis choisir l’équipe qui doit répondre dans la barre persistante. Chaque bouton indique si l’équipe doit agir, attend une réponse ou a terminé son étape. « Jouer : [équipe] » propose un prochain rôle actif ; le choix manuel des six rôles reste possible. Le profil affiche les mêmes consignes, ressources, outils Oracle, objectifs économiques et formulaires que les mobiles élèves. Les offres et engagements restent soumis aux contrôles métier normaux. Changer de rôle n’envoie pas automatiquement de réponse.
+
+Le volet « Commandes animateur » permet d’injecter des événements, de modifier les contraintes et les objectifs, de fixer l’heure de fin et de consulter le bilan. « Rejouer le test avec IA » prépare les propositions avec le modèle et les quotas habituels ; l’animateur les valide en changeant de rôle. Les appels API consomment le crédit OpenAI uniquement en phase IA. « Nouvelle partie test » crée une nouvelle séance privée et conserve les anciens bilans accessibles par leur adresse jusqu’à l’expiration.
+
+Les six rôles sont contrôlés par des routes serveur réservées à une session animateur valide. Aucun jeton joueur ni mot de passe n’est placé dans l’URL. Les accès élèves et le QR code ne donnent pas accès au profil ; l’inscription publique et la lecture publique de la partie test sont bloquées. Le profil ne permet pas de prendre le contrôle des rôles d’une partie normale.

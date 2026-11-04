@@ -4,7 +4,8 @@ import {stage,startExperiment,replayWithAI,publicExperiment,taskContext,candidat
 import {financeView,financePreview,recordFinance,changeEconomics} from './supply-finance.mjs';
 import {closeAtDeadline,setDeadline,nextAlarm,cancelPreparation} from './supply-timing.mjs';
 import {quickPlan} from './supply-quick-plan.mjs';
-const view=(g,p,admin=false,ready=false)=>({...baseView(g,p,admin,ready),...publicExperiment(g,p,admin),...financeView(g,p,admin),endsAt:g.endsAt||null,finishedReason:g.finishedReason||null,...(admin&&stage(g)==='ai'?{quickPlan:quickPlan(g)}:{})});
+import {nextTask} from '../site/supply-tasks.mjs';
+const view=(g,p,admin=false,ready=false)=>({...baseView(g,p,admin,ready),...publicExperiment(g,p,admin),...financeView(g,p,admin),testMode:!!g.testMode,...(admin&&g.testMode?{testTasks:ROLES.map(r=>{const player=Object.values(g.players).find(p=>p.role===r.id),task=nextTask(baseView(g,player));return {role:r.id,kind:task.kind,title:task.title,waitingOn:task.waitingOn||[],complete:!!task.complete};})}:{}),endsAt:g.endsAt||null,finishedReason:g.finishedReason||null,...(admin&&stage(g)==='ai'?{quickPlan:quickPlan(g)}:{})});
 const json=(x,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store'}});
 const bearer=r=>r.headers.get('Authorization')?.replace(/^Bearer /,'')||'';
 const deny=(text,status=400)=>{const e=Error(text);e.status=status;throw e;};
@@ -48,16 +49,25 @@ export class SupplyRoom extends DurableObject {
   }));
  }
  async fetch(request){
-  const op=new URL(request.url).pathname.slice(1);
-  if(!((request.method==='GET'&&['state','results'].includes(op))||(request.method==='POST'&&['init','join','role','proposal','message','accept','reject','plan','control','assist','assist-save','request','quote','check','renegotiate','approve','auto-confirm'].includes(op))))return json({error:'Méthode non autorisée.'},405);
+  let op=new URL(request.url).pathname.slice(1);const testOperation=op;
+  if(!((request.method==='GET'&&['state','results'].includes(op))||(request.method==='POST'&&['init','join','role','proposal','message','accept','reject','plan','control','assist','assist-save','request','quote','check','renegotiate','approve','auto-confirm','test-state','test-act'].includes(op))))return json({error:'Méthode non autorisée.'},405);
   let b={};if(request.method==='POST'){const raw=await request.text();if(raw.length>4096)return json({error:'Message trop volumineux.'},413);try{b=JSON.parse(raw||'{}');}catch{return json({error:'Message invalide.'},400);}}
   return this.ctx.blockConcurrencyWhile(async()=>{try{
    let g=await this.ctx.storage.get('game');
-   if(op==='init'){if(g)deny('Séance existante.',409);g=initialGame(b.code,b.workflow===1?1:2);recordFinance(g,'Ouverture de la séance');await this.ctx.storage.put('game',g);await this.ctx.storage.setAlarm(g.expires);return json({code:g.code,game:'supply',expires:g.expires},201);}
+   if(op==='init'){if(g)deny('Séance existante.',409);g=initialGame(b.code,b.workflow===1?1:2);g.testMode=b.testMode===true&&g.workflow===2;if(g.testMode){g.captains={};for(const r of ROLES){const id='TEST-'+r.id;g.players[crypto.randomUUID()]={id,role:r.id};g.captains[r.id]=id;}log(g,'animateur','Partie test privée · six équipes simulées · pilotage réservé à l’animateur');}recordFinance(g,'Ouverture de la séance');await this.ctx.storage.put('game',g);await this.ctx.storage.setAlarm(g.expires);return json({code:g.code,game:'supply',expires:g.expires},201);}
    if(!g||g.expires<Date.now())deny('Séance expirée ou inconnue.',404);
    if(closeAtDeadline(g)){recordFinance(g,'Heure de fin atteinte');await this.ctx.storage.put('game',g);await this.schedule(g,false);}
+   if(g.testMode&&op==='state')deny('Partie test privée : utilisez votre accès animateur.',403);
    let p=g.players[bearer(request)];
+   if(['test-state','test-act'].includes(testOperation)){
+    if(!g.testMode)deny('Ce profil est réservé aux parties test privées.',409);
+    if(!ROLES.some(r=>r.id===b.role))deny('Choisissez un rôle valide.');
+    p=Object.values(g.players).find(p=>p.role===b.role);
+    if(testOperation==='test-state')op='state';
+    else{if(!['request','quote','check','accept','reject','plan','message','renegotiate','auto-confirm'].includes(b.action))deny('Action de test non autorisée.');op=b.action;b=b.payload&&typeof b.payload==='object'&&!Array.isArray(b.payload)?b.payload:{};}
+   }
    if(op==='join'){
+    if(g.testMode)deny('Partie test privée : ouvrez le profil test depuis l’accès animateur.',403);
     if(p)return json({token:bearer(request)});
     if(g.phase==='finished')deny('La partie est terminée.',409);
     if(Object.keys(g.players).length>=30)deny('La partie est complète (30 participants).',409);

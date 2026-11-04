@@ -5,8 +5,8 @@ export async function configuration(){
   const url=new URL(c.api);if(url.protocol!=='https:' && url.hostname!=='localhost' && url.hostname!=='127.0.0.1')throw Error('Adresse de service invalide.');
   return url.origin;
 }
-export async function api(base,path,{token='',body,signal}={}){
-  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+export async function api(base,path,{token='',body,signal,timeoutMs=10000}={}){
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),timeoutMs);
   try {
     const r=await fetch(base+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined,signal:signal||controller.signal,cache:'no-store'});
     const data=await r.json();if(!r.ok){const e=Error(data.error||'Le service ne répond pas.');e.status=r.status;throw e;}return data;

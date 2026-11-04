@@ -1,5 +1,7 @@
 import {esc,configuration,api,save,load,validRoom} from './live-common.mjs';
-let base='',key='',code='',snapshot='',pollTimer=null,busy=false;
+import {hostSupply,bindHostSupply} from './supply-ui.mjs';
+let base='',key='',code='',snapshot='',pollTimer=null,busy=false,kind=load('assas-active-kind')||'quiz';
+const sessionPath=()=>`/api/${kind==='supply'?'supply-sessions':'sessions'}/${code}`;
 const $=s=>document.querySelector(s),error=s=>{$('#host-error').textContent=s;};
 const params=new URLSearchParams(location.hash.slice(1));
 if(validRoom(params.get('r')||''))save('assas-active-session',params.get('r'));
@@ -14,6 +16,8 @@ function rememberSession(token,persistent){
 }
 function bars(result,options){return result.received===0?'<p class="status">Aucune réponse à cette question. Aucun pourcentage à interpréter.</p>':result.counts.map((n,i)=>{const pct=Math.round(n/result.received*100);return `<div class="bar-row"><div class="bar-label"><span>${esc(options[i])}</span><strong>${n} · ${pct} %</strong></div><div class="bar" role="img" aria-label="${esc(options[i])} : ${n} réponses, ${pct} pour cent"><span style="width:${pct}%"></span></div></div>`;}).join('');}
 function show(r){
+ if(r.game==='supply'){$('#dashboard').innerHTML=hostSupply(r);bindHostSupply($('#dashboard'),supplyControl);return;}
+
  const revealed=['results','finished'].includes(r.phase),finished=r.phase==='finished',scm=r.game==='scm';
  const total=r.total||3, options=r.options;
  const url=new URL('jeu.html',location.href);url.hash='r='+r.code;
@@ -26,7 +30,7 @@ function show(r){
  $('#dashboard').innerHTML=`<div class="host-grid"><section><div class="eyebrow">Séance ${r.code} · ${scm?'Mission : 80 coffrets · ':''}${finished?'Bilan du questionnaire':`${scm?'Étape':'Décision'} ${r.index+1} / ${total}`}</div><h1>${finished?(scm?'80 coffrets. Toute une chaîne.':'Vos choix, puis la discussion.'):esc(r.question.title)}</h1>${story}${stats}${summary}${finished?'':`<p class="question">${esc(r.question.question)}</p>${scm?`<ol class="host-options">${options.map(o=>`<li>${esc(o)}</li>`).join('')}</ol>`:''}${revealed?bars(r,options):`<div class="status">${r.phase==='waiting'?'Les élèves peuvent rejoindre la séance. Ouvrez le vote quand vous êtes prêt.':'Le vote est ouvert. La répartition reste masquée jusqu’à votre décision.'}</div>`}${discovery}${revealed?`<div class="debrief"><h2>Discutons du résultat.</h2><p>${esc(r.question.discussion)}</p>${scm?'':`<details><summary>Afficher les points de débrief</summary><p>${esc(r.question.debrief)}</p></details>`}</div>`:''}`}<div class="actions">${command?`<button class="btn primary" data-command="${command[0]}">${command[1]} →</button>`:''}</div></section><aside class="join-panel"><strong>Accès au jeu uniquement</strong>${qr.createSvgTag({cellSize:5,margin:20,scalable:true,alt:'QR code pour rejoindre la séance'})}<div class="room-code">${r.code}</div><a href="${esc(url.href)}" target="_blank" rel="noopener noreferrer">${esc(url.href)}</a><p class="hint">Aucun compte nécessaire.<br>Le même accès reste valable pour le jeu SCM.<br>Le QR code ne donne pas accès à votre console.</p></aside></div>`;
  $('#dashboard').querySelector('[data-command]')?.addEventListener('click',e=>control(e.currentTarget.dataset.command));
 }
-async function refresh(){if(!code||busy)return;try{const r=await api(base,`/api/sessions/${code}/results`,{token:key});const next=JSON.stringify(r);if(next!==snapshot){snapshot=next;show(r);}$('#network').textContent='Connecté · Séance '+code;error('');}catch(e){$('#network').textContent='Connexion à rétablir';error(e.message);}}
+async function refresh(){if(!code||busy)return;try{const r=await api(base,sessionPath()+'/results',{token:key});const next=JSON.stringify(r);if(next!==snapshot&&!document.activeElement?.closest('#dashboard form')){snapshot=next;show(r);}$('#network').textContent='Connecté · Séance '+code;error('');}catch(e){$('#network').textContent='Connexion à rétablir';error(e.message);}}
 async function openConsole(){
  await api(base,'/api/admin',{token:key});
  $('#login').hidden=true;$('#host').hidden=false;$('#logout').hidden=false;
@@ -47,11 +51,13 @@ async function restoreSession(){
  try{base=await configuration();await openConsole();}
  catch(e){if(e.status===401)forgetSession();$('#login-error').textContent=e.status===401?'Votre connexion a expiré. Saisissez votre mot de passe.':e.message;$('#login').hidden=false;$('#host').hidden=true;}
 }
-async function control(command){if(busy)return;busy=true;$('#dashboard').querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await api(base,`/api/sessions/${code}/control`,{token:key,body:{command}});snapshot=JSON.stringify(r);show(r);error('');}catch(e){error(e.message);}finally{busy=false;$('#dashboard').querySelectorAll('button').forEach(b=>b.disabled=false);}}
+async function control(command){if(busy)return;busy=true;$('#dashboard').querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await api(base,sessionPath()+'/control',{token:key,body:{command}});snapshot=JSON.stringify(r);show(r);error('');}catch(e){error(e.message);}finally{busy=false;$('#dashboard').querySelectorAll('button').forEach(b=>b.disabled=false);}}
 $('#login form').addEventListener('submit',e=>{e.preventDefault();login();});
-$('#create').addEventListener('click',async()=>{if(busy)return;busy=true;$('#create').disabled=true;try{const r=await api(base,'/api/sessions',{token:key,body:{game:$('#game-type').value}});code=r.code;snapshot='';save('assas-active-session',code);await refreshAfterCreate();}catch(e){error(e.message);}finally{busy=false;$('#create').disabled=false;}});
-async function refreshAfterCreate(){const r=await api(base,`/api/sessions/${code}/results`,{token:key});snapshot=JSON.stringify(r);show(r);}
+$('#create').addEventListener('click',async()=>{if(busy)return;busy=true;$('#create').disabled=true;try{const game=$('#game-type').value;const r=await api(base,game==='supply'?'/api/supply-sessions':'/api/sessions',{token:key,body:{game}});kind=game==='supply'?'supply':'quiz';save('assas-active-kind',kind);code=r.code;snapshot='';save('assas-active-session',code);await refreshAfterCreate();}catch(e){error(e.message);}finally{busy=false;$('#create').disabled=false;}});
+async function refreshAfterCreate(){const r=await api(base,sessionPath()+'/results',{token:key});snapshot=JSON.stringify(r);show(r);}
 $('#projection').addEventListener('click',()=>{const active=document.body.classList.toggle('projection');$('#projection').textContent=active?'Quitter la projection':'Projection';});
 $('#logout').addEventListener('click',()=>{clearInterval(pollTimer);forgetSession();$('#password').value='';$('#host').hidden=true;$('#login').hidden=false;$('#logout').hidden=true;$('#dashboard').innerHTML='';});
-if(params.get('game')==='scm')$('#game-type').value='scm';
+if(['scm','supply'].includes(params.get('game')))$('#game-type').value=params.get('game');
 if(key)restoreSession();
+
+async function supplyControl(body){if(busy)return;busy=true;try{const r=await api(base,sessionPath()+'/control',{token:key,body});snapshot=JSON.stringify(r);show(r);error('');}catch(e){error(e.message);}finally{busy=false;}}

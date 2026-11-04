@@ -1,3 +1,5 @@
+import {SupplyRoom,generateDraft} from './supply-room.mjs';
+export {SupplyRoom};
 import { DurableObject } from 'cloudflare:workers';
 import { OPTIONS, quizFor } from './questions.mjs';
 import {passwordMatches,createSession,validSession,addressKey} from './auth.mjs';
@@ -44,6 +46,27 @@ export default {
       }
       const admin=await validSession(bearer(request),env);
       if(u.pathname==='/api/admin' && request.method==='GET') return wrap(admin?json({ok:true}):json({error:'Connectez-vous pour ouvrir la console.'},401));
+      if(u.pathname==='/api/supply-sessions'&&request.method==='POST'){
+        if(!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
+        const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),n=>alphabet[n%32]).join('');
+        return wrap(await env.SUPPLY.get(env.SUPPLY.idFromName(code)).fetch(new Request('https://supply/init',{method:'POST',body:JSON.stringify({code})})));
+      }
+      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist)$/);
+      if(supply){
+        const [,code,op]=supply;if(['results','control'].includes(op)&&!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
+        const room=env.SUPPLY.get(env.SUPPLY.idFromName(code));
+        const raw=request.method==='POST'?await request.text():undefined;if(raw&&raw.length>4096)return wrap(json({error:'Message trop volumineux.'},413));
+        const headers={'Content-Type':'application/json',Authorization:request.headers.get('Authorization')||''};
+        const result=await room.fetch(new Request('https://supply/'+op,{method:request.method,headers,body:raw}));
+        if(op!=='assist'||!result.ok)return wrap(result);
+        const {ticket,context}=await result.json();
+        try{
+          const text=await generateDraft(env,context);
+          const saved=await room.fetch(new Request('https://supply/assist-save',{method:'POST',headers,body:JSON.stringify({ticket,text})}));
+          if(!saved.ok)return wrap(saved);
+          return wrap(json({ticket,text}));
+        }catch(e){await room.fetch(new Request('https://supply/assist-save',{method:'POST',headers,body:JSON.stringify({ticket,failed:true})}));return wrap(json({error:e.message},503));}
+      }
       if(u.pathname==='/api/sessions' && request.method==='POST') {
         if(!admin) return wrap(json({error:'Connectez-vous pour ouvrir la console.'},401));
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

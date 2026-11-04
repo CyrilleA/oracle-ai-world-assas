@@ -6,7 +6,7 @@
   "workers_dev": true,
   "assets": {"directory":"site","binding":"ASSETS","run_worker_first":true,"html_handling":"none"},
   "vars": {"ALLOWED_ORIGINS":"https://cyrillea.github.io"},
-  "durable_objects": {"bindings":[{"name":"ROOMS","class_name":"QuizRoom"},{"name":"LOGIN_LIMITS","class_name":"LoginLimit"}]},
-  "migrations": [{"tag":"v1","new_sqlite_classes":["QuizRoom"]},{"tag":"v2","new_sqlite_classes":["LoginLimit"]}],
+  "durable_objects": {"bindings":[{"name":"SUPPLY","class_name":"SupplyRoom"},{"name":"ROOMS","class_name":"QuizRoom"},{"name":"LOGIN_LIMITS","class_name":"LoginLimit"}]},
+  "migrations": [{"tag":"v1","new_sqlite_classes":["QuizRoom"]},{"tag":"v2","new_sqlite_classes":["LoginLimit"]},{"tag":"v3","new_sqlite_classes":["SupplyRoom"]}],
   "observability": {"enabled": false}
 }

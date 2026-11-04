@@ -49,3 +49,8 @@ docs/hebergement.md            Hébergement gratuit et évolution vers les jeux 
 Les liens vers les annonces publiques OpenAI et Oracle figurent dans le portail. Les schémas Agentic Enterprise présentent un cadre conceptuel inspiré du document fourni par Cyrille Ancelot. Les chiffres de l’atelier sont fictifs. Le portail n’est pas une interface Oracle connectée.
 
 Les PDF sources et les fichiers de travail locaux ne font pas partie de ce dépôt. Les visuels et contenus tiers restent soumis aux droits de leurs auteurs. Aucune licence de réutilisation générale n’est accordée par ce dépôt.
+
+
+## Jeu de rôles Supply Chain
+
+La rubrique 7 ouvre une partie multijoueur à six équipes sur mobile, avec négociation, engagements, contraintes animateur et aide IA facultative. Voir [le guide complet](docs/jeu-de-roles.md) pour les rôles, les calculs et la configuration du secret OpenAI. Le mode sans IA reste utilisable sans clé.

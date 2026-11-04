@@ -77,8 +77,11 @@ for(let i=0;i<5;i++){run(`state.career=${i};render()`);assert.ok(nodes.get('#mai
 assert.ok(nodes.get('#main').innerHTML.includes('p. 8–9'));
 for(const a of ['help','sources','transverse','pause','fin']){run(`action('${a}')`);assert.ok(nodes.get('#modal').innerHTML.includes('modalTitle'),a+' : fenêtre nommée');run('closeModal()');}
 for(let i=0;i<3;i++){run(`demoModal(${i},false)`);for(let s=0;s<3;s++){run(`state.demoStep=${s};drawDemo()`);assert.ok(nodes.get('#modal').innerHTML.includes(run('DEMOS[state.demo].explain[state.demoStep]')));}run(`demoModal(${i},true)`);assert.ok(!nodes.get('#modal').innerHTML.includes('<iframe'),'Vidéo chargée uniquement au clic');run("action('video-load')");assert.ok(nodes.get('.video-player').innerHTML.includes('youtube-nocookie.com'));run('closeModal()');}
-check('Object.keys(SOURCES).length===29','29 références officielles');
-run("navigate('frise');state.timelineStep=0;render()");
+check('Object.keys(SOURCES).length===33','33 références officielles');
+run("navigate('frise');state.supplyHistoryDone=false;render()");assert.ok(nodes.get('#main').innerHTML.includes('D’où vient la supply chain ?'));
+for(let i=0;i<4;i++){run(`state.supplyHistoryStep=${i};render()`);assert.ok(nodes.get('#main').innerHTML.includes(run('SUPPLY_HISTORY[state.supplyHistoryStep].question')));}
+run("action('supply-history-ai');state.timelineStep=0;render()");assert.ok(nodes.get('#main').innerHTML.includes('La révolution entre dans les opérations.'));
+run("action('supply-history-back')");assert.ok(nodes.get('#main').innerHTML.includes('D’où vient la supply chain ?'));run("action('supply-history-ai')");
 for(let i=0;i<7;i++){check(`state.timelineStep===${i}`,'Index du jalon');assert.ok(nodes.get('#main').innerHTML.includes(run('TIMELINE[state.timelineStep].meaning')));if(i<6)run("action('time-next')");}
 assert.ok(nodes.get('#main').innerHTML.includes('Vers l’Agentic Enterprise'));
 run("action('time-overview')");check('state.timelineOverview===true','Vue d’ensemble');
@@ -106,7 +109,7 @@ check("MORNING_AGENDA.find(r=>r.route==='demos').end-MORNING_AGENDA.find(r=>r.ro
 check("MORNING_AGENDA.find(r=>r.route==='frise').end-MORNING_AGENDA.find(r=>r.route==='frise').start===20",'ChatGPT : 20 minutes');
 check("MORNING_AGENDA.find(r=>r.route==='enterprise').end-MORNING_AGENDA.find(r=>r.route==='enterprise').start===20",'Agentic Enterprise : 20 minutes');
 run("navigate('parcours')");assert.ok(nodes.get('#main').innerHTML.includes('Et vous, demain ?'));run("action('pause')");assert.ok(nodes.get('#modal').innerHTML.includes('Reprise à 11 h'));run('closeModal()');
-console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,5 métiers issus du PDF,29 sources et180 minutes.');
+console.log('Contrôles réussis :9 espaces,7 jalons,3 vues Agentic Enterprise illustrées,4 schémas embarqués,2 offres et escalade humaine,agrandissement des images,5 annonces,6 domaines,vue Record → Outcome illustrée,5 métiers issus du PDF,33 sources et180 minutes.');
 console.log('Ces contrôles de logique et de contenu ne remplacent pas un rendu dans un navigateur.');
 
 run("navigate('scm');state.scmView=0;render()");

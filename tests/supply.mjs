@@ -1,3 +1,4 @@
+import {initialGame,supplierDelivery,supplierCapacity,validateOffer,assess,applyEvent,view} from '../live/supply-game.mjs';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import assert from 'node:assert/strict';
 import {fileURLToPath} from 'node:url';
@@ -6,6 +7,23 @@ let captured=null,aiCalls=0;
 const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:root+'.wrangler/build/worker.js',compatibilityDate:'2026-10-01',durableObjects:{ROOMS:{className:'QuizRoom',useSQLite:true},LOGIN_LIMITS:{className:'LoginLimit',useSQLite:true},SUPPLY:{className:'SupplyRoom',useSQLite:true}},bindings:{ADMIN_PASSWORD:'TEST-only-12345',SESSION_KEY:'test-signing-secret-32-characters-long',OPENAI_API_KEY:'test-fake-not-a-real-api-key',ALLOWED_ORIGINS:'https://cyrillea.github.io'},outboundService:async r=>{assert.equal(new URL(r.url).hostname,'api.openai.com');captured=JSON.parse(await r.text());aiCalls++;return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:'Bonjour, pouvez-vous confirmer la quantité et le délai souhaités ?'}]}]});}}));
 async function call(url,{token='',body,status=200,method}={}){const r=await mf.dispatchFetch('https://quiz.test'+url,{method:method||(body?'POST':'GET'),headers:{Origin:'https://cyrillea.github.io','Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});const data=await r.json();assert.equal(r.status,status,`${url} : ${JSON.stringify(data)}`);return data;}
 try{
+ // Vérifier l'effet industriel, y compris sur des engagements existants.
+ const g=initialGame('TESTTEST'),a=g.resources.supplierA,b=g.resources.supplierB;
+ assert.equal(supplierDelivery(a,20),840);assert.equal(supplierDelivery(a,60),900);
+ assert.equal(supplierDelivery(b,20),900);assert.equal(supplierDelivery(b,60),1020);
+ b.rawStock=10;assert.equal(supplierCapacity(b),30);
+ assert.throws(()=>validateOffer(g,{from:'supplierB',quantity:31,unitPrice:1300,delivery:1200}),/stock et la fabrication/);
+ g.messages=[{id:'a',from:'supplierA',type:'offer',status:'accepted',quantity:20,unitPrice:1000,delivery:840}];
+ assert.throws(()=>validateOffer(g,{from:'supplierA',quantity:20,unitPrice:1000,delivery:840}),/14:30/,'Le stock déjà réservé oblige à fabriquer la seconde offre');
+ g.messages[0].quantity=60;g.messages[0].delivery=900;
+ g.messages.push({from:'supplierB',type:'offer',status:'accepted',quantity:20,unitPrice:1300,delivery:900},{from:'ops',type:'offer',status:'accepted',quantity:80,unitPrice:500,delivery:1080});
+ g.plan={quantity:80,transport:'normal'};assert.equal(assess(g).arrival,1080);
+ applyEvent(g,'productionA');assert.equal(assess(g).arrival,1140,'La cadence ralentie reporte une livraison déjà engagée');
+ applyEvent(g,'stockA');assert.equal(supplierCapacity(a),50);assert.equal(assess(g).available,70);assert.equal(assess(g).valid,false);
+ assert.equal(view(g,{id:'P1',role:'supplierA'}).inventory.stockRemaining,0);
+ // Compatibilité : aucune nouvelle restriction ajoutée aux anciennes séances.
+ const legacy=initialGame('OLDOLD12');legacy.resources.supplierA={capacity:60,minPrice:1000,earliest:840};
+ assert.equal(supplierCapacity(legacy.resources.supplierA),60);assert.equal(supplierDelivery(legacy.resources.supplierA,60),840);
  const {token:admin}=await call('/api/login',{body:{password:'TEST-only-12345'}});
  await call('/api/supply-sessions',{body:{},status:401});
  const {code}=await call('/api/supply-sessions',{token:admin,body:{},status:201}),path='/api/supply-sessions/'+code;
@@ -24,9 +42,11 @@ try{
  await msg(players[11].token,{to:'supplierA',type:'request',text:'Nous souhaitons un devis.'},403);
  const prop=await call(path+'/proposal',{token:players[11].token,body:{to:'supplierA',type:'request',text:'Pouvez-vous proposer 60 composants ?'}});
  await msg(buyer,{proposalId:prop.proposals[0].id});
- const aState=await call(path+'/state',{token:A});assert.ok(aState.brief.includes('10 €'));assert.equal(aState.resources,undefined);assert.equal(aState.log,undefined);assert.equal(aState.messages.length,1);assert.equal(aState.proposals.length,0);
+ const aState=await call(path+'/state',{token:A});assert.ok(aState.brief.includes('10 €'));assert.equal(aState.resources,undefined);assert.equal(aState.log,undefined);assert.equal(aState.messages.length,1);assert.equal(aState.proposals.length,0);assert.equal(aState.inventory.stockRemaining,20);assert.equal(aState.inventory.productionRate,40);assert.equal(aState.resourceBriefs,undefined);assert.equal((await call(path+'/state',{token:buyer})).inventory,null);
  await msg(A,{type:'offer',to:'buying',quantity:60,unitPrice:999,delivery:840,text:'Trop bas'},400);
- let r=await offer(A,'buying',60,1000,840);let id=r.messages.at(-1).id;
+ await msg(A,{type:'offer',to:'buying',quantity:60,unitPrice:1000,delivery:840,text:'Fabrication trop rapide'},400);
+ await msg(B,{type:'offer',to:'buying',quantity:60,unitPrice:1300,delivery:900,text:'Stock insuffisant pour cette heure'},400);
+ let r=await offer(A,'buying',60,1000,900);let id=r.messages.at(-1).id;
  await call(path+'/accept',{token:buyer,body:{id}});await call(path+'/accept',{token:buyer,body:{id},status:409});
  r=await offer(B,'buying',20,1300,900);await call(path+'/accept',{token:buyer,body:{id:r.messages.at(-1).id}});
  r=await offer(ops,'planning',80,500,1080);await call(path+'/accept',{token:planner,body:{id:r.messages.at(-1).id}});
@@ -37,8 +57,12 @@ try{
  await call(path+'/message',{token:ops,body:{to:'planning',type:'offer',quantity:1.5,unitPrice:500,delivery:1080,text:'Quantité invalide'},status:400});
  assert.equal((await call(path+'/state',{token:A})).events.length,0,'Une contrainte transport reste confidentielle aux opérations');
  const express=await call(path+'/plan',{token:planner,body:{quantity:80,transport:'express'}});assert.equal(express.assessment.valid,true);assert.equal(express.assessment.cost,154000);assert.equal(express.assessment.arrival,1140);
+ await host({command:'event',event:'packaging'});const noBoxes=await call(path+'/results',{token:admin});assert.equal(noBoxes.assessment.available,60);assert.equal(noBoxes.assessment.valid,false);assert.ok(noBoxes.assessment.reasons.some(x=>x.includes('emballages')));
+ await msg(ops,{type:'offer',to:'planning',quantity:80,unitPrice:500,delivery:1140,text:'Emballages insuffisants'},400);
+ assert.equal((await call(path+'/state',{token:ops})).inventory.packagingStock,60);assert.equal((await call(path+'/state',{token:A})).events.length,0);
+ await host({command:'event',event:'restockPackaging'});assert.equal((await call(path+'/results',{token:admin})).assessment.valid,true);
  await host({command:'pause'});await msg(buyer,{to:'supplierA',type:'note',text:'Test pause'},409);await host({command:'resume'});
- r=await offer(B,'buying',1,1300,900);id=r.messages.at(-1).id;await host({command:'next'});await call(path+'/accept',{token:buyer,body:{id},status:409});
+ r=await offer(B,'buying',1,1300,903);id=r.messages.at(-1).id;await host({command:'next'});await call(path+'/accept',{token:buyer,body:{id},status:409});
  await call(path+'/assist',{token:A,body:{to:'buying',text:'Rédiger notre réponse'},status:409});assert.equal(aiCalls,0);
  await host({command:'event',event:'shortB'});await host({command:'ai',enabled:true,limit:1});
  const before=(await call(path+'/results',{token:admin})).messages.length;
@@ -50,5 +74,5 @@ try{
  await host({command:'event',event:'quality'});assert.equal((await call(path+'/results',{token:admin})).assessment.valid,false);
  await host({command:'finish'});await msg(buyer,{to:'supplierA',type:'note',text:'Après la fin'},409);const done=await call(path+'/results',{token:admin});assert.equal(done.phase,'finished');assert.ok(done.log.length>0);
  assert.equal((await call(path+'/state',{token:A})).log,undefined);
- console.log('Jeu supply chain : 30 joueurs, 6 rôles, propositions, droits capitaine, négociation, engagements, calculs, contraintes confidentielles, pause, expiration des offres et brouillons IA filtrés vérifiés.');
+ console.log('Jeu supply chain : 30 joueurs, 6 rôles, propositions, droits capitaine, négociation, engagements, calculs, stocks réservés, matières premières, fabrication, emballages, contraintes confidentielles, pause, expiration des offres et brouillons IA filtrés vérifiés.');
 }finally{await mf.dispose();}

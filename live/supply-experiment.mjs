@@ -9,7 +9,7 @@ export function report(g){const e=g.experiment,a=assess(g),orders=g.documents.fi
 export function replayWithAI(g){
  if(g.workflow!==2||stage(g)!=='human'||!g.experiment)throw Error('Démarrez d’abord la phase humaine.');
  const e=g.experiment,r=report(g);e.reports.push(r);e.archive={documents:g.documents,messages:g.messages,events:g.events,log:g.log,plan:g.plan};
- const fresh=initialGame(g.code);for(const k of ['documents','messages','proposals','events','plan','aiUsed','aiTickets','drafts'])g[k]=fresh[k];
+ const fresh=initialGame(g.code);for(const k of ['documents','messages','proposals','events','log','plan','aiUsed','aiTickets','drafts'])g[k]=fresh[k];
  Object.assign(g,structuredClone(e.baseline));g.round=1;g.phase='running';g.aiEnabled=true;g.aiLimit=6;
  g.experiment={...e,stage:'ai',startedAt:Date.now(),endedAt:null,jobs:{},history:[]};
 }
@@ -17,7 +17,7 @@ export function publicExperiment(g,p,admin=false){
  const e=g.experiment;if(g.workflow!==2)return {};
  const job=e?.jobs?.[p?.role];let current=job;
  if(job&&job.fingerprint!==taskContext(g,p)?.fingerprint)current=null;
- return {experiment:{stage:stage(g),startedAt:e?.startedAt||null,reports:admin?(e?.reports||[]):undefined,current:admin&&e?report(g):undefined,jobs:admin?Object.fromEntries(Object.entries(e?.jobs||{}).map(([r,j])=>[r,{status:j.status,error:j.error,startedAt:j.startedAt,readyAt:j.readyAt}])):undefined},autoDraft:current?{id:current.id,status:current.status,error:current.error,startedAt:current.startedAt,readyAt:current.readyAt,action:current.action,payload:current.payload,reason:current.reason,exception:current.exception}:null};
+ return {experiment:{stage:stage(g),startedAt:e?.startedAt||null,reports:admin?(e?.reports||[]):undefined,current:admin&&e?report(g):undefined,jobs:admin?Object.fromEntries(Object.entries(e?.jobs||{}).map(([r,j])=>[r,{status:j.status,error:j.error,startedAt:j.startedAt,readyAt:j.readyAt}])):undefined},autoDraft:current?{id:current.id,status:current.status,error:current.error,startedAt:current.startedAt,readyAt:current.readyAt,action:current.action,payload:current.payload,reason:safeExplanation(current),exception:current.exception}:null};
 }
 export function taskContext(g,p){
  if(!p?.role)return null;const s=view(g,p),task=nextTask({...s,isCaptain:true});
@@ -49,11 +49,17 @@ export function candidates(g,p,context=taskContext(g,p)){
  return options.sort((a,b)=>Number(a.exception)-Number(b.exception)||Math.max(0,a.payload.delivery-req.delivery)-Math.max(0,b.payload.delivery-req.delivery)||b.payload.quantity-a.payload.quantity||a.estimatedCost-b.estimatedCost||a.payload.delivery-b.payload.delivery).slice(0,8);
 }
 export function validateAction(g,p,action,payload){const copy=structuredClone(g);if(action==='quote'&&p.role==='planning')act(copy,p,'plan',{quantity:payload.quantity,transport:payload.transport});act(copy,p,action,payload);return copy;}
-export function aiContext(g,p,c,options){const {s,req}=c;return {role:s.team.name,brief:s.brief,request:{quantity:req.quantity,delivery:req.delivery,text:req.text},ownConstraints:s.inventory,inputs:s.inputs,availableBudget:s.spending?.available,events:s.events.map(e=>e.text),documents:s.documents.slice(-12).map(({ref,from,to,type,status,quantity,delivery,unitPrice,text})=>({ref,from,to,type,status,quantity,delivery,unitPrice,text})),options:options.map((o,index)=>({index,quantity:o.payload.quantity,delivery:o.payload.delivery,unitPrice:o.payload.unitPrice,transport:o.payload.transport,estimatedCost:o.estimatedCost,exception:o.exception}))};}
+export function aiContext(g,p,c,options){const {s,req}=c;return {role:s.team.name,action:options[0]?.action,destination:s.roles.find(r=>r.id===options[0]?.payload.to)?.name||req.from,brief:s.brief,request:{quantity:req.quantity,delivery:req.delivery,text:req.text},ownConstraints:s.inventory,inputs:s.inputs,availableBudget:s.spending?.available,events:s.events.map(e=>e.text),documents:s.documents.slice(-12).map(({ref,from,to,type,status,quantity,delivery,unitPrice,text})=>({ref,from,to,type,status,quantity,delivery,unitPrice,text})),options:options.map((o,index)=>({index,quantity:o.payload.quantity,delivery:o.payload.delivery,unitPrice:o.payload.unitPrice,transport:o.payload.transport,estimatedCost:o.estimatedCost,exception:o.exception}))};}
 export function confirmAuto(g,p,id){
  if(stage(g)!=='ai'||!captain(g,p))throw Error('Le capitaine valide la proposition en phase IA.');
  const j=g.experiment.jobs[p.role],c=taskContext(g,p);if(!j||j.id!==id||j.status!=='ready'||j.fingerprint!==c?.fingerprint)throw Error('La situation a changé. Attendez la nouvelle proposition.');
  validateAction(g,p,j.action,j.payload);
  if(j.action==='quote'&&p.role==='planning')act(g,p,'plan',{quantity:j.payload.quantity,transport:j.payload.transport});
- act(g,p,j.action,{...j.payload,text:j.reason});g.documents.at(-1).ai=true;j.status='sent';j.sentAt=Date.now();
+ act(g,p,j.action,{...j.payload,text:safeExplanation(j)});g.documents.at(-1).ai=true;j.status='sent';j.sentAt=Date.now();
+}
+
+export function safeExplanation(j){
+ const b=j.payload;if(!b)return '';
+ const at=`${String(Math.floor(b.delivery/60)).padStart(2,'0')}:${String(b.delivery%60).padStart(2,'0')}`;
+ return j.action==='request'?`Demander ${b.quantity} unités avant ${at}. La disponibilité et le délai restent à confirmer par l’équipe destinataire.`:`Proposer ${b.quantity} unités à ${at}${b.unitPrice?' pour '+(b.unitPrice/100).toLocaleString('fr-FR')+' € par unité':''}. Cette option respecte les ressources vérifiées au moment de la préparation ; le destinataire doit encore l’accepter.`;
 }

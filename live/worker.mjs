@@ -52,7 +52,7 @@ export default {
         const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),n=>alphabet[n%32]).join('');
         return wrap(await env.SUPPLY.get(env.SUPPLY.idFromName(code)).fetch(new Request('https://supply/init',{method:'POST',body:JSON.stringify({code,workflow:body.workflow===1?1:2})})));
       }
-      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist|request|quote|check|renegotiate|approve)$/);
+      const supply=u.pathname.match(/^\/api\/supply-sessions\/([A-HJ-NP-Z2-9]{8})\/(state|results|join|role|proposal|message|accept|reject|plan|control|assist|request|quote|check|renegotiate|approve|auto-confirm)$/);
       if(supply){
         const [,code,op]=supply;if(['results','control'].includes(op)&&!admin)return wrap(json({error:'Accès réservé à l’animateur.'},401));
         const room=env.SUPPLY.get(env.SUPPLY.idFromName(code));

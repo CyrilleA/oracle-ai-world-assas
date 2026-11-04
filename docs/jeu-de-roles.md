@@ -152,3 +152,16 @@ Dans la console, « Heure de fin de la partie » permet de choisir une date et u
 En phase IA, une solution de référence complète apparaît immédiatement dans la console, calculée par le moteur de contraintes local. Il explore les répartitions fournisseurs, stocks, fabrication, transport, budget et objectifs économiques, en respectant les quantités et les prix déjà engagés. Les nouvelles offres doivent encore être obtenues et acceptées ; le calcul ne crée aucun engagement. Si aucun plan complet n’est trouvé dans ces hypothèses, l’animateur voit une exception, sans fausse promesse. Ce calcul local est clairement distingué de l’IA OpenAI : aucun coût privé d’une autre équipe n’est transmis à son modèle. Le temps en millisecondes du moteur ne doit pas être confondu avec le temps API ou la durée de résolution collective.
 
 La préparation OpenAI des équipes indépendantes est lancée en parallèle. Les pages actualisent plus vite lorsqu’une proposition est en cours de préparation, puis ralentissent quand une autre équipe doit agir. Le modèle économique gpt-5-nano est conservé, avec sorties courtes et un délai d’attente limité. La rapidité globale dépend encore des validations humaines ; le bilan mesure ces durées réelles.
+
+
+## Relier les équipes aux outils Oracle
+
+Chaque fiche de rôle contient « Du jeu à Oracle SCM » : noms des applications, activité couverte, explication de leur complémentarité, enchaînement visuel et détails avec un exemple des 80 coffrets et un lien officiel. La console animateur rassemble les six correspondances dans « Les outils Oracle de chaque équipe ».
+
+- Planification : Supply Planning pour construire le plan, Global Order Promising pour calculer une date de promesse et Supply Chain Orchestration pour déclencher et suivre les approvisionnements.
+- Achats : Sourcing pour consulter/comparer, Purchasing pour créer et gérer les commandes, Supplier Portal pour les échanges avec les fournisseurs. Ces fonctions appartiennent à l’environnement Procurement.
+- Fournisseurs A et B : Supplier Portal pour interagir avec l’acheteur ; Inventory Management, Manufacturing et Supply Chain Cost Management comme exemples d’outils dans leur propre entreprise. Les mêmes familles d’outils répondent à des contraintes de stock, de fabrication et de coût différentes. Le portail de l’acheteur n’impose pas au fournisseur d’équiper son propre ERP d’Oracle.
+- Opérations/livraison : Warehouse Management pour réception/prélèvement/emballage/expédition, Transportation Management pour les expéditions, tarifs, équipements et capacités ; Inventory Management pour les quantités et mouvements. Manufacturing peut compléter le dispositif lorsqu’il s’agit de fabrication industrielle.
+- Client : Order Management et Global Order Promising sont présentés du côté de l’entreprise qui sert le client ; le client externe reçoit la promesse et le suivi via le canal choisi, sans supposer qu’il accède aux écrans internes.
+
+Les liens de chaque fiche renvoient aux pages Oracle et à la documentation produit vérifiées le 4 novembre 2026. Il s’agit d’une correspondance pédagogique, sans connexion du jeu à une instance Oracle. La couche IA est présentée comme une aide à la préparation et à la coordination, distincte des applications qui portent les transactions.

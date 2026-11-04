@@ -1,5 +1,5 @@
-import {roleInstructions} from './supply-instructions.mjs?v=rythme-20261104';
-import {timerBanner,tickCountdown} from './supply-timing.mjs?v=rythme-20261104';
+import {roleInstructions} from './supply-instructions.mjs?v=outils-oracle-20261104';
+import {timerBanner,tickCountdown} from './supply-timing.mjs?v=outils-oracle-20261104';
 import {financePanel,financeImpactCard} from './supply-finance.mjs?v=rentabilite-20261104';
 import {nextTask,proposalExplanation} from './supply-tasks.mjs?v=phases-20261104';
 export {nextTask} from './supply-tasks.mjs';

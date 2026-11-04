@@ -5,7 +5,7 @@
 - Élèves : `site/jeu.html`, sans navigation vers les autres parties de la présentation, sans corrigé et sans résultat collectif.
 - Animateur : `site/animateur.html`, protégé par un mot de passe et une session vérifiés par le serveur Cloudflare. La page est publique, les commandes et résultats exigent l’autorisation serveur.
 
-Le QR code de l’accueil mène uniquement au jeu. Dès qu’une séance est créée dans la console, le QR de l’accueil, ouvert dans le même navigateur, inclut automatiquement son code. La console affiche aussi le QR de la séance. Le QR générique permet de saisir le code projeté.
+Le QR code est affiché uniquement dans la console, après création d’une séance. Il mène directement au jeu de cette séance. L’accueil de la présentation contient le message de remerciement et l’accès animateur, sans QR code.
 
 La présentation générale reste un site public : le QR du jeu ne la présente pas aux élèves, mais ce dispositif ne rend pas secret le dépôt GitHub ou les URL du portail.
 
@@ -13,7 +13,7 @@ La présentation générale reste un site public : le QR du jeu ne la présente 
 
 1. Ouvrir l’accès animateur et saisir le mot de passe personnel défini dans Cloudflare. Cocher « Rester connecté sur cet appareil » pour conserver la connexion pendant sept jours.
 2. Créer une nouvelle séance avant l’arrivée des élèves. Une séance vide évite de mélanger les essais aux réponses de la classe.
-3. Revenir à l’accueil pour les remerciements et le QR, ou projeter le QR de la console. Garder accueil et console dans le même navigateur.
+3. Présenter les remerciements sur l’accueil, puis ouvrir la console et projeter son QR code.
 4. Ouvrir la première question. Les téléphones suivent l’étape décidée par l’animateur.
 5. Suivre le nombre de réponses reçues, puis **Clore le vote et afficher les résultats**. Les graphiques montrent les nombres et les pourcentages parmi les réponses reçues. Le nombre de participants sans réponse reste affiché.
 6. Discuter du résultat avant d’afficher les points de débrief, puis ouvrir la question suivante.

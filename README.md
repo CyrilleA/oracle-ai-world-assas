@@ -6,9 +6,9 @@ Portail pédagogique pour animer la matinée du 5 novembre 2026. Il présente un
 
 **Site : https://cyrillea.github.io/oracle-ai-world-assas/**
 
-Hébergement gratuit avec GitHub Pages. Une copie du site est également disponible sur https://assas-beaujolais-votes.oracle-ai-world-assas.workers.dev/ pour assurer l’accès lorsque GitHub Pages rencontre un incident. Les étudiants scannent le QR code ci-dessous et ouvrent le portail avec leur connexion Internet, sans compte GitHub.
+Hébergement gratuit avec GitHub Pages. Une copie du site est également disponible sur https://assas-beaujolais-votes.oracle-ai-world-assas.workers.dev/ pour assurer l’accès lorsque GitHub Pages rencontre un incident. Les étudiants scannent le QR code généré dans la console lors de la création de leur séance, avec leur connexion Internet, sans compte GitHub.
 
-![QR code du portail](site/qr-code-site.png)
+
 
 Le fichier `site/index.html` fonctionne aussi directement dans un navigateur. Son contenu, ses schémas et ses calculs sont embarqués. Les vidéos et les sources externes demandent une connexion Internet.
 

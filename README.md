@@ -14,7 +14,7 @@ Le fichier `site/index.html` fonctionne aussi directement dans un navigateur. So
 
 ## Animer la séance
 
-- **F** : mode projection.
+- **F** : mode projection, avec le menu de navigation visible.
 - **N** : notes de l’animateur.
 - **Flèches gauche/droite** : changer d’espace.
 - **Échap** : fermer une fenêtre ou les notes.

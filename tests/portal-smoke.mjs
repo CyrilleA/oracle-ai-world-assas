@@ -133,3 +133,8 @@ for(const [route,key,total] of [['enterprise','enterprise',3],['scm','infra',7],
  run(`lessonStep('${key}',-1)`);check(`Number(state[LESSON_DECKS['${key}'].field])===${total-2}`,'Retour à la carte précédente');
 }
 run("navigate('ai-world');state.feature=0;render()");listeners.get('keydown')({key:'ArrowRight',target:{tagName:'BODY'},preventDefault(){}});check("state.feature===1&&state.route==='ai-world'",'Les flèches parcourent les cartes avant de changer de chapitre');
+
+for(const key of ['shackelford','abilene','wisconsin','jupiter'])assert.ok(fs.existsSync(new URL('../site/'+run(`ORACLE_CAMPUS_PHOTOS['${key}'].file`),import.meta.url)),'Photo locale du campus '+key);
+run("navigate('scm');state.scmView=0;state.infraLayer=0;render()");assert.ok(nodes.get('#main').innerHTML.includes('assets/oracle-campus-shackelford.png'));
+run('state.infraLayer=4;render()');assert.ok(nodes.get('#main').innerHTML.includes('assets/oracle-campus-abilene.jpg'));
+run("state.infraLayer=5;state.campusPhoto='jupiter';render()");assert.ok(nodes.get('#main').innerHTML.includes('assets/oracle-campus-jupiter.jpg'));assert.ok(nodes.get('#main').innerHTML.includes('27 août 2026'));

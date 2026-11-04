@@ -16,7 +16,7 @@ function rememberSession(token,persistent){
 }
 function bars(result,options){return result.received===0?'<p class="status">Aucune réponse à cette question. Aucun pourcentage à interpréter.</p>':result.counts.map((n,i)=>{const pct=Math.round(n/result.received*100);return `<div class="bar-row"><div class="bar-label"><span>${esc(options[i])}</span><strong>${n} · ${pct} %</strong></div><div class="bar" role="img" aria-label="${esc(options[i])} : ${n} réponses, ${pct} pour cent"><span style="width:${pct}%"></span></div></div>`;}).join('');}
 function show(r){
- if(r.game==='supply'){$('#dashboard').innerHTML=hostSupply(r);bindHostSupply($('#dashboard'),supplyControl);return;}
+ if(r.game==='supply'){const open=[...$('#dashboard').querySelectorAll('details[id][open]')].map(x=>x.id);const feed=$('#activity-feed'),scroll=feed?.scrollTop||0;$('#dashboard').innerHTML=hostSupply(r);open.forEach(id=>{const el=document.getElementById(id);if(el)el.open=true;});bindHostSupply($('#dashboard'),supplyControl,r);if($('#activity-feed'))$('#activity-feed').scrollTop=scroll;return;}
 
  const revealed=['results','finished'].includes(r.phase),finished=r.phase==='finished',scm=r.game==='scm';
  const total=r.total||3, options=r.options;
@@ -60,4 +60,4 @@ $('#logout').addEventListener('click',()=>{clearInterval(pollTimer);forgetSessio
 if(['scm','supply'].includes(params.get('game')))$('#game-type').value=params.get('game');
 if(key)restoreSession();
 
-async function supplyControl(body){if(busy)return;busy=true;try{const r=await api(base,sessionPath()+'/control',{token:key,body});snapshot=JSON.stringify(r);show(r);error('');}catch(e){error(e.message);}finally{busy=false;}}
+async function supplyControl(body){if(busy)return;busy=true;try{const r=await api(base,sessionPath()+'/control',{token:key,body});snapshot=JSON.stringify(r);show(r);error('');const feedback=$('[data-control-status]');if(feedback)feedback.textContent=body.command==='limit'?'Nouvelle limite appliquée. Le plan est recalculé et l’équipe concernée a été informée.':'Action appliquée. Les activités sont à jour.';}catch(e){error(e.message);}finally{busy=false;}}

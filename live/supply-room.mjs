@@ -1,5 +1,5 @@
 import {DurableObject} from 'cloudflare:workers';
-import {ROLES,EVENTS,initialGame,members,captain,log,view,act,applyEvent} from './supply-game.mjs';
+import {ROLES,EVENTS,initialGame,members,captain,log,view,act,applyEvent,applyLimit} from './supply-game.mjs';
 const json=(x,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store'}});
 const bearer=r=>r.headers.get('Authorization')?.replace(/^Bearer /,'')||'';
 const deny=(text,status=400)=>{const e=Error(text);e.status=status;throw e;};
@@ -36,6 +36,7 @@ export class SupplyRoom extends DurableObject {
      g.aiEnabled=b.enabled;g.aiLimit=b.limit;log(g,'animateur',`Aide IA ${b.enabled?'activée':'désactivée'} · quota total ${b.limit} par équipe`);
     }
     else if(c==='event'&&['running','paused'].includes(g.phase)){if(g.events.length>=40)deny('Limite de contraintes atteinte.',409);applyEvent(g,b.event,b.text,b.target);}
+    else if(c==='limit'&&['waiting','running','paused'].includes(g.phase)){if(g.events.length>=100)deny('Limite de changements atteinte.',409);applyLimit(g,b);}
     else if(c==='captain'){
      const candidate=Object.values(g.players).find(p=>p.id===b.playerId&&p.role===b.role);if(!candidate)deny('Participant inconnu dans cette équipe.');
      g.captains||={};g.captains[b.role]=candidate.id;log(g,'animateur',`Capitaine ${b.role} : ${b.playerId}`);

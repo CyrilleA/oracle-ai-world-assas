@@ -35,3 +35,16 @@ Le brouillon est renvoyé dans le formulaire, sans envoyer ni accepter de messag
 L’appel utilise Responses API, `store:false`, un contexte borné aux 6 derniers messages adressés à l’équipe et 500 tokens de sortie maximum. Les durées d’analyse ou gains de qualité ne sont pas inventés ; le journal permet un débrief qualitatif. Les données du jeu sont supprimées de Cloudflare après 48 h ; `store:false` n’est pas une promesse d’absence de toute conservation opérationnelle par le fournisseur API.
 
 Le modèle économique retenu le 4 novembre 2026 est GPT-5 nano : 0,05 $ / million de tokens d’entrée et 0,40 $ / million de tokens de sortie au tarif standard. Il est déprécié avec arrêt annoncé au 11 décembre 2026. Avant de réutiliser le jeu après cette date, choisir explicitement un modèle disponible dans OPENAI_MODEL. Aucun basculement automatique vers un modèle plus cher n’est effectué. Références : https://developers.openai.com/api/docs/models/gpt-5-nano et https://developers.openai.com/api/docs/deprecations .
+
+## Console animateur : tout suivre et intervenir
+
+Le fil « Toutes les activités » affiche les échanges et offres (statut à jour), les propositions internes soumises par les équipiers, le journal des décisions et le dernier brouillon IA enregistré par participant. Filtrer par équipe ou type ; les 50 éléments les plus récents sont visibles dans le fil, et les historiques complets des échanges et décisions restent disponibles plus bas. Les textes en cours de frappe sur un téléphone ne sont pas transmis au serveur. Les tentatives IA et leurs échecs sont comptabilisés dans le journal ; le brouillon enregistré n’est pas un historique de toutes les versions.
+
+« Modifier une contrainte ou une limite » remplace une valeur précise, avant le début ou pendant le jeu, y compris en pause :
+- Client / budget : budget maximal, quantité demandée, heure promise.
+- Chaque fournisseur : stock total avant réservations, matières premières, capacité et cadence de fabrication, début de fabrication, quantité totale maximale, transport, première livraison, prix plancher.
+- Opérations : stock d’emballages, capacité, cadence, durée du transport, composants bloqués, prix plancher.
+
+La console indique la valeur actuelle et les bornes de saisie. Un motif facultatif accompagne la notification. Chaque modification est journalisée avec ancienne et nouvelle valeur. Seule l’équipe concernée reçoit la contrainte ; le budget est communiqué à tous. Demande et heure promise sont adressées au client (les valeurs partagées du plan restent visibles). Changer la demande ne vaut pas acceptation automatique d’une nouvelle promesse : les équipes doivent la renégocier. Les contraintes privées ne deviennent pas visibles aux autres équipes.
+
+Les engagements restent enregistrés : réduire une capacité ou retarder une fabrication peut rendre le plan irréalisable. L’animateur peut libérer un engagement accepté pour permettre la renégociation. Les prix déjà acceptés restent ceux de l’offre, même si le prix plancher change. Les limites ne sont plus modifiables après la fin. Les anciennes séances dépourvues d’une propriété industrielle doivent être recréées pour utiliser cette propriété.

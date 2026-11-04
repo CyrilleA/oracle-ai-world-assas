@@ -27,3 +27,5 @@
 
 @media(max-width:600px){.supply-inventory{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:360px){.supply-inventory{grid-template-columns:1fr}}
+
+.supply-admin-nav{margin:24px 0}.supply-activity-feed{max-height:560px;overflow:auto;overscroll-behavior:contain;margin-top:16px}.supply-activity-item{border-top:1px solid #dce2dc;padding:16px 4px}.supply-activity-item>small{color:#63706a}.supply-activity-item .supply-message{margin-bottom:0}#supply-limits,#supply-activity,#supply-teams{scroll-margin-top:24px}

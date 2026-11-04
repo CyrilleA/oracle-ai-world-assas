@@ -18,6 +18,24 @@ export const EVENTS=[
  {id:'road',label:'Transport : trajet rallongé de 90 min',target:'ops'},
  {id:'demand',label:'Client : 10 coffrets supplémentaires',target:'client'}
 ];
+export const LIMITS={
+ all:[{id:'budget',label:'Budget maximal',kind:'money',min:0,max:10000000},{id:'demand',label:'Quantité demandée par le client',min:1,max:120},{id:'deadline',label:'Heure promise au client',kind:'time',min:780,max:1320}],
+ supplier:[{id:'stock',label:'Stock prêt à livrer',min:0,max:120},{id:'rawStock',label:'Matières premières disponibles',min:0,max:120},{id:'productionCapacity',label:'Capacité maximale de fabrication',min:0,max:120},{id:'productionRate',label:'Cadence de fabrication (unités / h)',min:1,max:240},{id:'productionStart',label:'Début de fabrication',kind:'time',min:0,max:1320},{id:'capacity',label:'Quantité totale maximale',min:0,max:120},{id:'transit',label:'Transport fournisseur (minutes)',min:0,max:360},{id:'earliest',label:'Première livraison possible',kind:'time',min:780,max:1320},{id:'minPrice',label:'Prix plancher par composant',kind:'money',min:0,max:10000}],
+ ops:[{id:'packagingStock',label:'Stock d’emballages',min:0,max:240},{id:'capacity',label:'Capacité maximale de préparation',min:0,max:120},{id:'rate',label:'Cadence de préparation (coffrets / h)',min:1,max:240},{id:'travel',label:'Durée du transport normal (minutes)',min:0,max:360},{id:'quarantine',label:'Composants bloqués par la qualité',min:0,max:120},{id:'minPrice',label:'Prix plancher de préparation',kind:'money',min:0,max:10000}]
+};
+export function limitValue(g,target,field){return target==='all'?(field==='deadline'?g.promise.delivery:g[field]):g.resources[target]?.[field];}
+export function applyLimit(g,{target,field,value,reason=''}){
+ const schema=LIMITS[target==='all'?'all':['supplierA','supplierB'].includes(target)?'supplier':target==='ops'?'ops':'']?.find(x=>x.id===field);
+ if(!schema||!Number.isInteger(value)||value<schema.min||value>schema.max)fail('Choisissez une limite autorisée et une valeur dans la plage indiquée.');
+ const before=limitValue(g,target,field);if(before===undefined)fail('Cette limite nécessite une nouvelle séance avec les règles de stock et de fabrication.');
+ const note=String(reason).trim();if(note.length>400)fail('Le motif doit tenir en 400 caractères.');
+ const format=n=>schema.kind==='money'?money(n):schema.kind==='time'?clock(n):String(n);
+ const label=`${schema.label} : ${format(before)} → ${format(value)}${note?' · '+note:''}`;
+ if(target==='all'){if(field==='deadline')g.promise.delivery=value;else g[field]=value;}else g.resources[target][field]=value;
+ const recipient=target==='all'?(field==='budget'?'all':'client'):target;
+ g.events.push({id:crypto.randomUUID(),event:'limit',text:label,target:recipient,at:Date.now(),round:g.round,informational:false});
+ log(g,'animateur',`Limite → ${recipient} : ${label}`);
+}
 export const clock=n=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 export const money=n=>`${(n/100).toLocaleString('fr-FR',{maximumFractionDigits:2})} €`;
 export function initialGame(code){return {code,game:'supply',created:Date.now(),expires:Date.now()+172800000,phase:'waiting',round:1,revision:0,players:{},messages:[],proposals:[],events:[],log:[],aiEnabled:false,aiLimit:3,aiUsed:{},aiTickets:{},drafts:{},demand:80,budget:200000,promise:{quantity:80,delivery:1140},resources:{supplierA:{capacity:60,minPrice:1000,earliest:840,stock:20,rawStock:40,productionCapacity:40,productionRate:40,productionStart:780,transit:60},supplierB:{capacity:60,minPrice:1300,earliest:900,stock:20,rawStock:40,productionCapacity:40,productionRate:20,productionStart:840,transit:60},ops:{capacity:100,minPrice:500,rate:40,travel:60,quarantine:0,packagingStock:80}},plan:null};}
@@ -40,7 +58,7 @@ export function assess(g,plan=g.plan){
  const operation=accepted(g,'ops').at(-1),q=plan?.quantity||0;
  const available=Math.min(supply,g.resources.ops.capacity,g.resources.ops.packagingStock??Infinity,operation?.quantity||0);
  const ready=suppliers.length?Math.max(...suppliers.map(o=>o.delivery))+Math.ceil(q/g.resources.ops.rate*60):null;
- const arrival=!plan||ready===null?null:Math.max(operation?.delivery||0,ready+g.resources.ops.travel-(plan?.transport==='express'?30:0));
+ const arrival=!plan||ready===null?null:Math.max(operation?.delivery||0,ready+Math.max(0,g.resources.ops.travel-(plan?.transport==='express'?30:0)));
  const cost=suppliers.reduce((n,o)=>n+o.cost,0)+q*(operation?.unitPrice||0)+(plan?12000+(plan.transport==='express'?16000:0):0);
  const reasons=[];if(!q)reasons.push('La planification n’a pas encore confirmé de plan.');
  if(q>available)reasons.push('Les engagements, stocks et capacités ne couvrent pas la quantité du plan.');
@@ -65,7 +83,7 @@ export function view(g,p,admin=false,ready=false){
  roles:ROLES.map(r=>({...r,members:members(g,r.id).map((x,i)=>({id:x.id,captain:(g.captains?.[r.id]||members(g,r.id)[0]?.id)===x.id})),count:members(g,r.id).length})),participants:Object.keys(g.players).length,
  demand:g.demand,budget:g.budget,promise:g.promise,plan:g.plan,assessment:assess(g),aiEnabled:g.aiEnabled,aiReady:ready,aiLimit:g.aiLimit,aiUsed:admin?g.aiUsed:(g.aiUsed[role]||0),
  messages:g.messages.filter(m=>admin||m.from===role||m.to===role),proposals:g.proposals.filter(m=>admin||m.from===role),events:g.events.filter(e=>admin||e.target==='all'||e.target===role),
- ...(admin?{resources:g.resources,resourceBriefs:Object.fromEntries(['supplierA','supplierB','ops'].map(id=>[id,teamBrief(g,id)])),log:g.log,aiCounts:Object.fromEntries(ROLES.map(r=>[r.id,g.log.filter(e=>e.who===r.id&&e.kind==='ai').length])),drafts:undefined}:{}),
+ ...(admin?{limitSchema:LIMITS,resources:g.resources,resourceBriefs:Object.fromEntries(['supplierA','supplierB','ops'].map(id=>[id,teamBrief(g,id)])),log:g.log,aiCounts:Object.fromEntries(ROLES.map(r=>[r.id,g.log.filter(e=>e.who===r.id&&e.kind==='ai').length])),aiDrafts:Object.entries(g.drafts).map(([player,d])=>({playerId:player,role:Object.values(g.players).find(p=>p.id===player)?.role||'',text:d.text,at:d.at}))}:{}),
  inventory:['supplierA','supplierB'].includes(role)&&g.resources[role].stock!==undefined?{...g.resources[role],...supplierStatus(g,role)}:role==='ops'&&g.resources.ops.packagingStock!==undefined?{packagingStock:g.resources.ops.packagingStock}:null,
  draft:p?g.drafts[p.id]||null:null};
 }

@@ -54,3 +54,17 @@ Les PDF sources et les fichiers de travail locaux ne font pas partie de ce dép�
 ## Jeu de rôles Supply Chain
 
 La rubrique 7 ouvre une partie multijoueur à six équipes sur mobile, avec négociation, engagements, contraintes animateur et aide IA facultative. Voir [le guide complet](docs/jeu-de-roles.md) pour les rôles, les calculs et la configuration du secret OpenAI. Le mode sans IA reste utilisable sans clé.
+
+## Support PDF sur mobile
+
+Les pages `jeu.html` et `supply.html` proposent le téléchargement public de `documents/oracle-ai-world-assas.pdf`, sans compte ni accès animateur. Le lien est également disponible dans Bienvenue. Le document contient les cartes publiques, les photos, les schémas et les liens vidéo, sans réponses des élèves ni données des séances.
+
+Pour actualiser le support après une modification des cartes :
+
+```sh
+mkdir -p tmp/pdfs
+node scripts/export-presentation.mjs
+python3 scripts/build-presentation-pdf.py
+```
+
+Le générateur Python utilise `reportlab`, `svglib`, `lxml` et `Pillow`, ainsi que les polices Arial de macOS. Vérifier visuellement le PDF rendu avant publication. Le fichier PDF est versionné et déployé avec les autres fichiers statiques.

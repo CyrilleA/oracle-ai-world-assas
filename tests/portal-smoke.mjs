@@ -138,3 +138,14 @@ for(const key of ['shackelford','abilene','wisconsin','jupiter'])assert.ok(fs.ex
 run("navigate('scm');state.scmView=0;state.infraLayer=0;render()");assert.ok(nodes.get('#main').innerHTML.includes('assets/oracle-campus-shackelford.png'));
 run('state.infraLayer=4;render()');assert.ok(nodes.get('#main').innerHTML.includes('assets/oracle-campus-abilene.jpg'));
 run("state.infraLayer=5;state.campusPhoto='jupiter';render()");assert.ok(nodes.get('#main').innerHTML.includes('assets/oracle-campus-jupiter.jpg'));assert.ok(nodes.get('#main').innerHTML.includes('27 août 2026'));
+
+// Le support reste accessible aux participants, sans authentification animateur.
+const pdfUrl=new URL('../site/documents/oracle-ai-world-assas.pdf',import.meta.url);
+assert.equal(fs.readFileSync(pdfUrl).subarray(0,5).toString(),'%PDF-');
+for(const file of ['jeu.html','supply.html']){
+ const mobile=fs.readFileSync(new URL('../site/'+file,import.meta.url),'utf8');
+ assert.ok(mobile.includes('href="documents/oracle-ai-world-assas.pdf"'));
+ assert.ok(mobile.includes('download="Oracle-AI-World-ASSAS.pdf"'));
+}
+run("state.partyStep=0;state.partyIntro=false;navigate('accueil')");
+assert.ok(nodes.get('#main').innerHTML.includes('Télécharger la présentation en PDF'));

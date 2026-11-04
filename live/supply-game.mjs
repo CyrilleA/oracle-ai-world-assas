@@ -92,11 +92,11 @@ export function assess(g,plan=g.plan){
  if(q>available)reasons.push('Les engagements, stocks et capacités ne couvrent pas la quantité du plan.');
  if(q>(g.resources.ops.packagingStock??Infinity))reasons.push('Le stock d’emballages ne couvre pas la quantité du plan.');
  if(q>shipping.capacity)reasons.push('La capacité du transport choisi ne couvre pas la quantité du plan.');
- if(cost>g.budget)reasons.push('Le budget est dépassé.');
  if(arrival===null||arrival>g.promise.delivery)reasons.push('L’arrivée avant l’heure promise n’est pas assurée.');
  if(q<g.promise.quantity)reasons.push('La quantité promise au client n’est pas couverte.');
  if(g.workflow===2&&q){const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);if(!sourcing||sourcing.quantity<q)reasons.push('L’engagement Achats ne couvre pas le plan.');if(sourcing&&sourcing.delivery>Math.min(operation?.delivery||1439,g.promise.delivery))reasons.push('L’engagement Achats est trop tardif.');if(sourcing&&!workflowHealth(g,sourcing).ok)reasons.push('L’engagement Achats est à risque : faites-le réviser.');if(operation&&!workflowHealth(g,operation).ok)reasons.push('L’engagement Opérations est à risque : faites-le réviser.');if(operation&&operation.transport!==plan.transport)reasons.push('Le transport diffère de l’engagement Opérations.');if([sourcing,operation].filter(Boolean).some(d=>d.dependencyIds?.some(id=>!accepted(g).some(a=>a.id===id))))reasons.push('Un engagement amont a changé : faites reconfirmer les engagements dépendants.');}
- return {quantity:q,available,arrival,cost,budget:g.budget,valid:reasons.length===0,reasons,originalDemand:g.demand,promise:g.promise,coverage:Math.min(q,available)};
+ const feasibilityReasons=[...reasons],feasible=reasons.length===0;if(cost>g.budget)reasons.push('Le budget est dépassé.');
+ return {quantity:q,available,arrival,cost,budget:g.budget,feasible,feasibilityReasons,overBudget:cost>g.budget,valid:reasons.length===0,reasons,originalDemand:g.demand,promise:g.promise,coverage:Math.min(q,available)};
 }
 export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA'||role==='supplierB'){
  const s=supplierStatus(g,role);
@@ -104,7 +104,7 @@ export function teamBrief(g,role){const r=g.resources[role];if(role==='supplierA
  return `Stock prêt à livrer, avant réservations : ${r.stock} composants ; encore non engagé : ${s.stockRemaining}. Matières premières : ${r.rawStock}, soit au plus ${Math.min(r.rawStock,r.productionCapacity)} composants à fabriquer. Capacité de fabrication : ${r.productionCapacity} composants ; cadence : ${r.productionRate}/h à partir de ${clock(g.productionWindows?.[role]?.start??r.productionStart)}. Transport : ${r.transit} min ; première livraison possible : ${clock(r.earliest)}. Pour un volume dépassant le stock, fabrication avant transport. Engagements : ${s.booked}, dont ${s.productionBooked} à fabriquer. Quantité supplémentaire possible : ${s.remaining}. Prix minimum : ${money(r.minPrice)} par composant. Ces limites sont confidentielles à votre équipe.`;
  }
  if(role==='ops')return `Capacité : ${r.capacity} coffrets.${r.packagingStock===undefined?'':` Stock d’emballages : ${r.packagingStock} ; un emballage nécessaire par coffret.`} Cadence : ${r.rate} coffrets/heure après réception de tous les composants. Prix de préparation minimum : ${money(r.minPrice)} par coffret. Transport normal : ${transportOption(g,'normal').duration} min, ${money(transportOption(g,'normal').cost)}, au plus ${transportOption(g,'normal').capacity} coffrets. Express : ${transportOption(g,'express').duration} min, ${money(transportOption(g,'express').cost)}, au plus ${transportOption(g,'express').capacity} coffrets. Composants bloqués par la qualité : ${r.quarantine}. Communiquez les impacts aux autres équipes.`;
- if(role==='buying')return 'Un composant acheté permet de préparer un coffret. Consultez les deux fournisseurs sur le prix, le stock disponible et les délais des quantités à fabriquer. Un stock déjà engagé ne peut pas être vendu une seconde fois. Vous seul acceptez leurs offres. Les achats acceptés consomment le budget même si tous les composants ne sont pas utilisés.';
+ if(role==='buying')return 'Un composant acheté permet de préparer un coffret. Consultez les deux fournisseurs sur le prix, le stock disponible et les délais des quantités à fabriquer. Un stock déjà engagé ne peut pas être vendu une seconde fois. Vous seul acceptez leurs offres. Le budget client ne bloque pas les prestataires ; la Planification arbitre le coût global. Les achats acceptés consomment le budget même si tous les composants ne sont pas utilisés.';
  if(role==='planning')return 'Vous donnez le rythme : lancez la demande aux Achats et relancez-les si nécessaire. Acceptez leurs approvisionnements, puis sollicitez la Livraison. Après acceptation de son offre, confirmez le plan et proposez la promesse au Client. Vérifiez qu’il l’a acceptée avant la fin réelle du jeu. Le site contrôle le coût et les capacités.';
  return `Besoin actuel : ${g.demand} coffrets. Budget total maximal : ${money(g.budget)}. Promesse actuelle : ${g.promise.quantity} coffrets avant ${clock(g.promise.delivery)}. Vous seul acceptez une nouvelle promesse proposée par la planification.`;}
 export function view(g,p,admin=false,ready=false){
@@ -234,9 +234,9 @@ function workflowOfferReport(original,m,existing=false){
  }else if(m.from==='planning'){
   const sourcing=accepted(g,'buying').at(-1),operation=accepted(g,'ops').at(-1);available=Math.min(sourcing?.quantity||0,operation?.quantity||0);
   if(!g.plan||g.plan.quantity!==q)errors.push('Confirmez d’abord un plan de cette quantité, appuyé sur les engagements Achats et Opérations.');
-  if(g.plan){const a=assess({...g,promise:{quantity:q,delivery:m.delivery}});earliest=a.arrival;cost=a.cost;errors.push(...a.reasons);}
+  if(g.plan){const a=assess({...g,promise:{quantity:q,delivery:m.delivery}});earliest=a.arrival;cost=a.cost;errors.push(...a.feasibilityReasons);}
  }
- if(cost!==null&&cost>g.budget)errors.push('Le budget maximal serait dépassé.');
+ if(m.from==='planning'&&cost!==null&&cost>g.budget)warnings.push('Le coût total dépasse le budget client de '+money(cost-g.budget)+'. La Planification doit arbitrer ou renégocier ; sa marge devient négative.');
  if(existing&&m.dependencyIds?.some(id=>!accepted(g).some(d=>d.id===id)))errors.push('Un engagement amont a été remplacé ou libéré : une reconfirmation est nécessaire.');
  const request=g.documents.find(d=>d.id===m.requestId);if(request&&m.delivery>request.delivery)warnings.push('L’heure proposée dépasse l’heure demandée : le destinataire devra accepter cette alternative.');
  if(request&&q>request.quantity)warnings.push('Volume supérieur à la demande : le destinataire doit accepter explicitement cette quantité.');
@@ -325,7 +325,7 @@ export function workflowAct(g,p,op,b){
   if(!sourcing||!operation)fail('Faites confirmer les engagements Achats et Opérations avant le plan.',409);
   if(operation.transport!==b.transport)fail('Le transport doit correspondre à l’engagement Opérations. Demandez une révision.',409);
   const candidate={quantity:b.quantity,transport:b.transport},result=assess({...g,promise:{quantity:b.quantity,delivery:1439}},candidate);
-  if(!result.valid)fail('Plan impossible : '+result.reasons.join(' '),409);
+  if(!result.feasible)fail('Plan impossible : '+result.feasibilityReasons.join(' '),409);
   g.plan={...candidate,at:Date.now(),round:g.round};log(g,p.role,`Plan confirmé : ${b.quantity} coffrets, transport ${b.transport}`);return;
  }
  fail('Action inconnue.');

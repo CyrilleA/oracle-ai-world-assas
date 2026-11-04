@@ -12,7 +12,7 @@ export function resourceModel(s){
  }
  if(s.role==='buying'){
   const wanted=(s.documents||[]).filter(d=>d.type==='request'&&d.to==='buying'&&d.status!=='rejected').at(-1)?.quantity||s.demand,ordered=orders.filter(d=>supplier(d.from)).reduce((n,d)=>n+d.quantity,0);
-  return {cells:[['Besoin',wanted,'composants'],['Commandés',ordered,'composants'],['À trouver',Math.max(0,wanted-ordered),'composants'],['Budget disponible',euro(s.spending?.available??s.budget),'pour vos achats']],quick:[1,2,3],note:s.spending?.overBudget?'Le budget global est dépassé : une nouvelle solution est nécessaire.':'Le budget disponible est actualisé avec les engagements du jeu.'};
+  return {cells:[['Besoin',wanted,'composants'],['Commandés',ordered,'composants'],['À trouver',Math.max(0,wanted-ordered),'composants'],['Budget disponible',euro(s.spending?.available??s.budget),'pour vos achats']],quick:[1,2,3],note:s.spending?.overBudget?'Le budget global est dépassé. Les commandes restent possibles ; la Planification doit arbitrer.':'Le budget disponible est actualisé avec les engagements du jeu.'};
  }
  return {cells:[['Budget maximal',euro(s.budget),'pour la mission']],quick:[0],note:''};
 }

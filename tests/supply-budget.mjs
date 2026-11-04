@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {initialGame,act,workflowCheck,workflowHealth,assess} from '../live/supply-game.mjs';
+import {finance} from '../live/supply-finance.mjs';
+import {financePanel} from '../site/supply-finance.mjs';
+const g=initialGame('OVERBUDG');g.phase='running';
+for(const role of ['client','planning','buying','supplierA','supplierB','ops'])g.players[role]={id:role,role};
+const run=(role,op,b)=>act(g,g.players[role],op,b);
+const request=(role,to,quantity,delivery,parentId='NEED-1')=>{run(role,'request',{to,quantity,delivery,parentId});return g.documents.at(-1);};
+const quote=(role,req,quantity,unitPrice,delivery)=>{run(role,'quote',{requestId:req.id,quantity,unitPrice,delivery,transport:'normal'});return g.documents.at(-1);};
+const accept=(role,d)=>run(role,'accept',{id:d.id});
+const supply=request('planning','buying',80,960);
+for(const role of ['supplierA','supplierB']){const req=request('buying',role,40,960,supply.id);const offer=quote(role,req,40,2000,960);accept('buying',offer);assert.equal(workflowHealth(g,offer).ok,true);}
+const buying=quote('buying',supply,80,0,960);accept('planning',buying);
+const service=request('planning','ops',80,1380),payload={requestId:service.id,quantity:80,unitPrice:1182,delivery:1380,transport:'normal'};
+const check=workflowCheck(g,g.players.ops,payload);assert.equal(check.ok,true);assert.equal(check.cost,266560);assert.deepEqual(check.reasons,[],'Le budget client ne bloque pas la livraison');
+const operation=quote('ops',service,80,1182,1380);accept('planning',operation);
+assert.equal(workflowHealth(g,operation).ok,true,'Un contrat hors budget reste valide pour le prestataire');
+assert.equal(finance(g,'planning').committed.profit,-66560);assert.equal(finance(g,'planning').goalReached,false);
+assert.match(financePanel({finance:finance(g,'planning')}),/Budget client dépassé/);
+run('planning','plan',{quantity:80,transport:'normal'});
+const promisePayload={requestId:'NEED-1',quantity:80,unitPrice:0,delivery:1380,transport:'normal'};
+const promiseCheck=workflowCheck(g,g.players.planning,promisePayload);assert.equal(promiseCheck.ok,true);assert.ok(promiseCheck.warnings.some(w=>w.includes('budget client')));
+const promise=quote('planning',g.documents[0],80,0,1380);accept('client',promise);
+const assessment=assess(g);assert.equal(assessment.feasible,true);assert.equal(assessment.overBudget,true);assert.equal(assessment.valid,false,'Le bilan conserve l’échec de l’objectif budgétaire');assert.deepEqual(assessment.feasibilityReasons,[]);
+assert.ok(assessment.reasons.includes('Le budget est dépassé.'));
+assert.equal(finance(g,'planning').committed.profit,-66560);
+const short=structuredClone(g);short.resources.ops.normalCapacity=60;assert.equal(workflowHealth(short,operation).ok,false,'Les capacités physiques restent obligatoires');
+console.log('Budget : offres et engagements prestataires hors budget autorisés, alerte et marge négative pour la Planification, plan réalisable accepté, échec économique conservé au bilan et capacités toujours contrôlées.');

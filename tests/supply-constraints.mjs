@@ -17,7 +17,7 @@ const r=game.resources.ops;applyLimit(game,{target:'ops',field:'normalCapacity',
 assert.ok(transportChoices(view(game,ops)).includes('Maximum 30 coffrets'));assert.equal(view(game,supplier).inventory.normalCapacity,undefined);
 // Dépenser moins que le budget produit ne suffit pas : la préparation et le transport comptent aussi.
 const budgetGame=initialGame('ALLCOSTS');budgetGame.documents.push({id:'rfq',type:'request',from:'buying',to:'supplierA',status:'open',quantity:60,delivery:900});
-let report=workflowCheck(budgetGame,supplier,{requestId:'rfq',quantity:60,unitPrice:2500,delivery:900});assert.equal(report.ok,false);assert.ok(report.reasons.some(x=>x.includes('budget')));assert.equal(report.cost,202000);
+let report=workflowCheck(budgetGame,supplier,{requestId:'rfq',quantity:60,unitPrice:2500,delivery:900});assert.equal(report.ok,true,'Le fournisseur peut dépasser le budget client');assert.deepEqual(report.reasons,[]);assert.equal(report.cost,202000);
 applyLimit(budgetGame,{target:'ops',field:'normalCost',value:20000});assert.equal(budgetProjection(budgetGame).remaining,140000);
 // Un engagement de transport impossible est refusé et une autre option reste possible.
 const g=initialGame('SHIPMENT');g.documents.push({id:'supplier',type:'offer',from:'supplierA',to:'buying',status:'accepted',quantity:60,unitPrice:1000,delivery:900},{id:'supplierB',type:'offer',from:'supplierB',to:'buying',status:'accepted',quantity:20,unitPrice:1300,delivery:900},{id:'internal',type:'offer',from:'buying',to:'planning',status:'accepted',quantity:80,unitPrice:0,delivery:900},{id:'service',type:'request',from:'planning',to:'ops',status:'open',quantity:80,delivery:1140});

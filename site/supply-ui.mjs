@@ -1,6 +1,6 @@
 import {oracleToolsOverview} from './supply-oracle-tools.mjs?v=outils-oracle-20261104';
 import {timingAdmin,bindTiming,timerBanner} from './supply-timing.mjs?v=rythme-20261104';
-import {financeAdmin,bindFinance,financeComparison} from './supply-finance.mjs?v=budget-planification-20261104';
+import {financeAdmin,bindFinance,financeComparison} from './supply-finance.mjs?v=budget-arbitrage-20261104';
 import {esc} from './live-common.mjs';
 export const euro=n=>(n/100).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:2});
 export const time=n=>n===null||n===undefined?'—':`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;

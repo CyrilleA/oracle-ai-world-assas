@@ -36,7 +36,7 @@ try{
  await act('planning','plan',{quantity:80,transport:'normal'},409);
  const reqA=await request('buying','supplierA',60,840,sourcing.id),reqB=await request('buying','supplierB',20,900,sourcing.id);
  assert.deepEqual((await state(teams.buying)).spending,{available:148000,overBudget:false});assert.equal((await state(teams.buying)).budgetDetails,undefined);
- await act('supplierA','quote',{requestId:reqA.id,quantity:60,unitPrice:2500,delivery:900},409);
+ assert.equal((await act('supplierA','check',{requestId:reqA.id,quantity:60,unitPrice:2500,delivery:900})).ok,true,'Le budget client ne bloque pas une offre fournisseur');
  const check=await act('supplierA','check',{requestId:reqA.id,quantity:60,unitPrice:1000,delivery:840});
  assert.equal(check.ok,false);assert.equal(check.feasibleQuantityAtRequestedTime,20);assert.equal(check.earliestForFullQuantity,900);
  await act('supplierA','quote',{requestId:reqA.id,quantity:60,unitPrice:1000,delivery:840},409);
@@ -46,7 +46,7 @@ try{
  await api(path+'/approve',peers.supplierA,{id:proposal.proposals.at(-1).id},403);
  const aResponse=await act('supplierA','approve',{id:proposal.proposals.at(-1).id}),offerA=aResponse.documents.at(-1);
  assert.equal((await state(teams.supplierA)).inventory.stockRemaining,20,'Une offre en attente ne réserve pas le stock');
- await control({command:'limit',target:'ops',field:'normalCost',value:160000});await control({command:'limit',target:'ops',field:'expressCost',value:170000});await accept('buying',offerA,409);assert.equal((await state(teams.supplierA)).inventory.booked,0);
+ await control({command:'limit',target:'ops',field:'normalCost',value:160000});await control({command:'limit',target:'ops',field:'expressCost',value:170000});assert.equal((await act('supplierA','check',{requestId:reqA.id,quantity:60,unitPrice:1000,delivery:900})).ok,true,'Le transport cher ne bloque pas le fournisseur');assert.equal((await state(teams.supplierA)).inventory.booked,0);
  await control({command:'limit',target:'ops',field:'normalCost',value:12000});await control({command:'limit',target:'ops',field:'expressCost',value:28000});
  await control({command:'limit',target:'supplierA',field:'capacity',value:20});await accept('buying',offerA,409);
  await control({command:'limit',target:'supplierA',field:'capacity',value:60});await accept('buying',offerA);await accept('buying',offerA,409);

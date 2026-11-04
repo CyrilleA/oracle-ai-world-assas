@@ -34,7 +34,7 @@ export function applyLimit(g,{target,field,value,reason=''}){
  if(target==='all'){if(field==='deadline')g.promise.delivery=value;else g[field]=value;}else g.resources[target][field]=value;
  const recipient=target==='all'?(field==='budget'?'all':'client'):target;
  g.events.push({id:crypto.randomUUID(),event:'limit',text:label,target:recipient,at:Date.now(),round:g.round,informational:false});
- log(g,'animateur',`Limite → ${recipient} : ${label}`);
+ log(g,'animateur',`Limite → ${ROLES.find(r=>r.id===recipient)?.name||'Toutes les équipes'} : ${label}`);g.log.at(-1).target=recipient;
 }
 export const clock=n=>`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
 export const money=n=>`${(n/100).toLocaleString('fr-FR',{maximumFractionDigits:2})} €`;
@@ -121,7 +121,7 @@ export function applyEvent(g,id,text,target){const e=EVENTS.find(x=>x.id===id);i
  if(id==='demand')g.demand+=10;
  const t=e?.target||target||'all';if(t!=='all'&&!ROLES.some(r=>r.id===t))fail('Équipe cible inconnue.');
  const label=e?.label||String(text||'').trim();if(!label||label.length>600)fail('Décrivez la contrainte en 600 caractères maximum.');
- g.events.push({id:crypto.randomUUID(),event:id,text:label,target:t,at:Date.now(),round:g.round,informational:id==='custom'});log(g,'animateur',`Contrainte → ${t} : ${label}`);
+ g.events.push({id:crypto.randomUUID(),event:id,text:label,target:t,at:Date.now(),round:g.round,informational:id==='custom'});log(g,'animateur',`Contrainte → ${t} : ${label}`);g.log.at(-1).target=t;
 }
 export function act(g,p,op,b){
  if(!p?.role)fail('Choisissez votre équipe avant de jouer.',403);

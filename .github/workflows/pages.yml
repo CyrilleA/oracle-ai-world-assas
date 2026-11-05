@@ -1,8 +1,7 @@
 name: Publier le portail
 
 on:
-  push:
-    branches: [main]
+  # Archived after the ASSAS presentation on 2026-11-05. Manual restoration only.
   workflow_dispatch:
 
 permissions:

@@ -17,6 +17,7 @@ const bearer = r => r.headers.get('Authorization')?.replace(/^Bearer /,'') || ''
 
 export default {
   async fetch(request, env) {
+    if(env.SERVICE_ARCHIVED==='true')return json({error:'Le service ASSAS est archivé.'},503);
     const u=new URL(request.url);
     if(!u.pathname.startsWith('/api/')){
       if(!env.ASSETS)return json({error:'Adresse inconnue.'},404);

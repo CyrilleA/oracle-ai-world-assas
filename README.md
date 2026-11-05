@@ -1,3 +1,5 @@
+> ARCHIVÉ le 5 novembre 2026 après la présentation. Publications mises hors ligne ; reprise : docs/ARCHIVAGE-2026-11-05.txt.
+
 # Oracle AI World et SCM — ASSAS
 
 Portail pédagogique pour animer la matinée du 5 novembre 2026. Il présente une frise depuis le lancement de ChatGPT, l’Agentic Enterprise, les annonces Fusion, les domaines SCM, un jeu de rôles et une conclusion « Et vous, demain ? » sur les métiers possibles de l’Agentic Enterprise.

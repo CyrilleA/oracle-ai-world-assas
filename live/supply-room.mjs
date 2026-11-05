@@ -13,6 +13,15 @@ export class SupplyRoom extends DurableObject {
  constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env;}
  async schedule(g,active=true){await this.ctx.storage.setAlarm(nextAlarm(g,{active}));}
  async alarm(){
+  // Stop autonomous AI work after the event; keep the existing 48-hour cleanup.
+  if(this.env.SERVICE_ARCHIVED==='true'){
+   await this.ctx.blockConcurrencyWhile(async()=>{
+    const g=await this.ctx.storage.get('game');
+    if(!g||g.expires<=Date.now())await this.ctx.storage.deleteAll();
+    else await this.ctx.storage.setAlarm(g.expires);
+   });
+   return;
+  }
   const works=await this.ctx.blockConcurrencyWhile(async()=>{
    const g=await this.ctx.storage.get('game');if(!g||g.expires<=Date.now()){await this.ctx.storage.deleteAll();return [];}
    if(closeAtDeadline(g)){recordFinance(g,'Heure de fin atteinte');await this.ctx.storage.put('game',g);await this.schedule(g,false);return [];}

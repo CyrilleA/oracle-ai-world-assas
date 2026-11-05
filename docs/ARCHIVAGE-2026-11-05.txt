@@ -1,0 +1,129 @@
+ASSAS — Architecture et archivage du portail Oracle AI World
+Version finale de la présentation du 5 novembre 2026
+
+1. OBJET ET ÉTAT D’ARCHIVAGE
+
+Ce projet est un portail de présentation en cartes et une application pédagogique multiutilisateur. Il comprend un questionnaire Beaujolais, un jeu de rôles Supply Chain avec traitement humain puis IA, une console animateur et un profil de test.
+
+À la demande de Cyrille, les accès publics sont mis hors ligne après la présentation : route Cloudflare workers.dev et URL de prévisualisation désactivées, publication GitHub Pages retirée, publication automatique désactivée et dépôt GitHub archivé en lecture seule. Les contrôles effectifs sont consignés dans ETAT-ARCHIVAGE.json joint à la sauvegarde.
+
+Le Worker et les ressources de stockage sont conservés dans le compte Cloudflare pour permettre une reprise. Le mode SERVICE_ARCHIVED=true bloque toutes les requêtes et empêche les alarmes du jeu de lancer de nouvelles préparations IA ; seule l’expiration des données temporaires reste programmée.
+
+2. ADRESSES DE RÉFÉRENCE AVANT FERMETURE
+
+Portail et API :
+https://assas-beaujolais-votes.oracle-ai-world-assas.workers.dev/
+
+Questionnaire animateur :
+https://assas-beaujolais-votes.oracle-ai-world-assas.workers.dev/animateur.html#game=beaujolais
+
+Jeu de rôles animateur :
+https://assas-beaujolais-votes.oracle-ai-world-assas.workers.dev/animateur.html#game=supply
+
+Ancien miroir GitHub Pages :
+https://cyrillea.github.io/oracle-ai-world-assas/
+
+Sources GitHub :
+https://github.com/CyrilleA/oracle-ai-world-assas
+
+Le PDF final est conservé séparément dans le dossier OneDrive ASSAS et dans site/documents/oracle-ai-world-assas.pdf à l’intérieur de l’archive. Après fermeture, les anciens liens publics ne servent plus de moyen de téléchargement.
+
+3. ARCHITECTURE GLOBALE
+
+Mac animateur et téléphones
+        | HTTPS / HTML, CSS et JavaScript
+        v
+Cloudflare Worker « assas-beaujolais-votes »
+        |-- Fichiers statiques : binding ASSETS -> dossier site/
+        |-- API /api/* : authentification et routage des séances
+        |-- ROOMS -> QuizRoom : questionnaire et votes
+        |-- SUPPLY -> SupplyRoom : simulation et engagements
+        |-- LOGIN_LIMITS -> LoginLimit : limitation des connexions
+        |-- API OpenAI Responses : propositions IA contrôlées
+
+Les Durable Objects sont des acteurs de stockage et de coordination Cloudflare, créés avec le stockage SQLite géré par Cloudflare. Il n’y a ni serveur sur le Mac, ni base D1 séparée, ni serveur WebSocket dans ce projet. Les navigateurs actualisent leur état par requêtes HTTP périodiques.
+
+GitHub conserve le code et son historique. GitHub Actions publiait le dossier site/ sur GitHub Pages ; ce miroir appelait la même API Cloudflare via site/live-config.json. GitHub Pages ne stockait pas les réponses.
+
+4. COMPOSANTS CÔTÉ NAVIGATEUR
+
+• site/index.html : portail autonome, styles et logique des neuf rubriques, navigation en cartes, mode projection, chronomètre, notes, schémas et chargement des vidéos au clic.
+• site/assets/ : photos des campus, visuels produits Oracle, photographies historiques et crédits des sources. Les SVG pédagogiques se trouvent également dans site/ ou sont embarqués dans le portail.
+• site/animateur.html et animateur.mjs : authentification, choix du jeu, création de séance, QR code, ouverture/clôture des votes, résultats, événements et limites de simulation.
+• site/jeu.html et jeu.mjs : questionnaire mobile, accessible sans compte nominatif, isolé de la navigation du portail.
+• site/supply.html et supply.mjs : espace mobile des équipes, rôle attribué, prochaine action, ressources, offres, engagements et validation des propositions.
+• site/supply-test.html et supply-test.mjs : profil de test réservé à l’animateur, avec choix du rôle à piloter.
+• site/host-entry.mjs : sélection explicite du questionnaire ou du jeu Supply Chain et reprise des séances séparées par jeu.
+• site/supply-ui.mjs, supply-tasks.mjs et supply-instructions.mjs : affichage, action suivante, états d’attente et consignes métier.
+• site/supply-constraints.mjs, supply-production.mjs, supply-workflow.mjs, supply-finance.mjs et supply-timing.mjs : présentation des capacités, validations, calculs économiques et temps de jeu.
+• site/supply-oracle-tools.mjs : correspondance entre les rôles du jeu et les applications Oracle.
+• site/live-common.mjs et live-config.json : origine de l’API, requêtes HTTPS, erreurs et stockage local des identifiants de participation.
+• site/vendor/qrcode.js : génération locale du QR code ; licence conservée.
+
+Actualisation : questionnaire environ 4,5 à 5,5 secondes ; jeu Supply Chain environ 3,5 à 4 secondes, accélérée à 0,9 seconde pendant certaines préparations IA ; console générale environ 5 secondes. Ces échanges ne constituent pas du temps réel par WebSocket.
+
+5. COMPOSANTS CÔTÉ SERVEUR
+
+• live/worker.mjs : point d’entrée, distribution des fichiers statiques, origines CORS autorisées, API de connexion, routage vers les objets de séance et protection des commandes animateur.
+• QuizRoom, exportée depuis worker.mjs : état du questionnaire, participants anonymes, votes, changement de question et résultats. L’animateur décide quand révéler la répartition.
+• LoginLimit, exportée depuis worker.mjs : limitation des essais de connexion, avec expiration de dix minutes.
+• live/supply-room.mjs / SupplyRoom : orchestration de séance, commandes, propositions, confirmations et alarmes pour la préparation IA et la fin de partie.
+• live/supply-game.mjs : scénario, rôles, événements, ressources et contrôles des actions structurées.
+• live/supply-experiment.mjs : comparaison humain/IA, contexte utile, options proposées, validation et bilan.
+• live/supply-finance.mjs : coûts, objectifs et rentabilité par équipe.
+• live/supply-timing.mjs : échéance réelle, pause, clôture et programmation des alarmes.
+• live/supply-quick-plan.mjs : calcul rapide d’une solution de référence faisable, sans créer automatiquement d’engagement.
+• live/questions.mjs : questions, options et éléments de débrief du questionnaire.
+
+Les offres ne réservent pas à elles seules les ressources. Les engagements sont vérifiés et enregistrés à l’acceptation. Le moteur prend en compte stocks, matières, cadence, délais, emballages, transport et engagements existants. Les prestataires peuvent dépasser le budget client ; la Planification arbitre le coût global et sa marge.
+
+6. IA ET CONTRÔLE HUMAIN
+
+Le serveur appelle https://api.openai.com/v1/responses avec le modèle configuré gpt-5-nano. Le code demande store:false, un raisonnement minimal et des sorties courtes. La préparation automatique choisit dans une liste d’options calculées par le moteur métier, avec une réponse JSON structurée ; l’action est revérifiée avant validation.
+
+En phase 1, les équipes préparent leurs décisions sans aide IA. En phase 2, les propositions sont préparées automatiquement à partir du besoin et des contraintes de l’équipe. Un humain valide les envois et engagements ou traite les exceptions. Le passage à la seconde phase conserve les équipes et le QR code mais rejoue le scénario initial ; le bilan humain est conservé dans la séance temporaire.
+
+Les brouillons et contraintes fictives autorisés sont transmis à OpenAI. Les identifiants élèves et secrets des autres équipes sont exclus du contexte prévu. Le navigateur ne reçoit jamais la clé API. La fermeture n’annule pas le compte OpenAI ; elle bloque les nouvelles préparations dans cette application.
+
+7. AUTHENTIFICATION ET DONNÉES
+
+Secrets Cloudflare nécessaires : ADMIN_PASSWORD, SESSION_KEY et OPENAI_API_KEY. Ils restent dans le compte Cloudflare et ne sont pas exportés dans la sauvegarde. Aucun fichier .env, .dev.vars, cookie, jeton de session ou configuration de connexion personnelle Wrangler n’est inclus.
+
+Le mot de passe animateur est distinct du mot de passe du compte Cloudflare. Le serveur vérifie le mot de passe et signe un jeton HMAC SHA-256. La durée est de 12 heures, ou de 7 jours si l’option de conservation est choisie. Les élèves reçoivent un identifiant de participation aléatoire par navigateur et par séance, conservé localement.
+
+Les séances et échanges sont temporaires, avec expiration de 48 heures. L’archive contient le code et le scénario, pas un export des réponses des participants ni l’état des parties jouées. Ces données ne sont pas reconstituables à partir du PDF ou du dépôt Git.
+
+8. CONTENU DE LA SAUVEGARDE
+
+• Presentation-ASSAS-2026-11-05.pdf : copie exacte du PDF final, 50 pages.
+• NOTE-Architecture-et-reprise-ASSAS.txt : cette note.
+• ASSAS-Site-et-composants-2026-11-05.zip : sources finales, actifs locaux, scripts, tests, documentation, configuration, verrouillage des dépendances, historique Git autonome et état d’archivage.
+• MANIFESTE-SHA256.json : empreintes des fichiers de l’archive, pour contrôler leur intégrité.
+• historique-git.bundle : toutes les références Git disponibles localement et l’historique complet, sans dépendre de GitHub.
+• ETAT-ARCHIVAGE.json : état des publications et résultats des contrôles effectués lors de la fermeture.
+
+node_modules et .wrangler ne sont pas sauvegardés : les dépendances sont réinstallables avec package-lock.json ; .wrangler contient des caches et peut contenir des états locaux. Les vidéos YouTube restent des liens et ne sont pas téléchargées. Leur disponibilité ultérieure dépend de leur éditeur. Les fichiers sources sont utilisables indépendamment du service en ligne.
+
+9. RESTAURER LE PROJET
+
+1) Décompresser l’archive dans un dossier de travail. Vérifier les empreintes si nécessaire. Pour retrouver aussi l’historique : git clone historique-git.bundle oracle-ai-world-assas, puis cd oracle-ai-world-assas. Réassocier l’origine https://github.com/CyrilleA/oracle-ai-world-assas.git si la copie clonée pointe vers le bundle local.
+2) Installer Node.js 22 ou supérieur, puis lancer npm ci. Le verrouillage des dépendances conserve les versions du projet ; Wrangler et Miniflare sont des dépendances de développement.
+3) Exécuter npm test, puis npm run test:live. Ce dernier vérifie le backend local avec Miniflare et la construction Wrangler, sans appeler l’API OpenAI avec une clé réelle.
+4) Pour réactiver Cloudflare, se reconnecter au compte autorisé avec npx wrangler login. Dans wrangler.jsonc, passer SERVICE_ARCHIVED à false et workers_dev à true. preview_urls peut rester false. Contrôler les secrets dans le compte Cloudflare ; les ressaisir uniquement si le compte ou le service a changé. Ne pas les ajouter aux sources.
+5) Publier avec npm run deploy:live, puis contrôler /api/health et la connexion animateur. Créer une nouvelle séance ; les anciennes ont vocation à expirer. Le changement de compte peut modifier l’URL : mettre alors à jour site/live-config.json et les liens du portail.
+6) GitHub : désarchiver le dépôt avant toute modification distante. Pour restaurer le miroir, réactiver GitHub Pages avec GitHub Actions, activer le workflow pages.yml et le déclencher manuellement. Le déclenchement automatique au push a été retiré ; le rétablir seulement si souhaité.
+7) Pour consulter uniquement la présentation en local : servir le dossier site/ avec python3 -m http.server 8000 depuis ce dossier, puis ouvrir http://localhost:8000. Cela n’active pas les jeux multiutilisateurs, qui ont besoin du backend configuré et réactivé.
+
+Le PDF est généré par scripts/export-presentation.mjs puis scripts/build-presentation-pdf.py. Le générateur Python dépend de reportlab, svglib, lxml et Pillow, et utilise les polices Arial de macOS. Préparer tmp/pdfs avant génération. Les vidéos restent des liens dans le PDF.
+
+10. RÉFÉRENCES TECHNIQUES
+
+Configuration de fermeture Workers :
+https://developers.cloudflare.com/workers/configuration/routing/workers-dev/
+https://developers.cloudflare.com/workers/wrangler/configuration/
+
+Arrêt de publication GitHub Pages :
+https://docs.github.com/en/pages/getting-started-with-github-pages/deleting-a-github-pages-site
+
+La copie locale d’origine est conservée dans :
+/Users/cancelot/Documents/Codex/2026-11-02/je-x20/outputs/oracle-ai-world-assas
